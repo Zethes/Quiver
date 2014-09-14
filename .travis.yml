@@ -38,4 +38,9 @@ install:
     - wget ${LDC_URL}
     - sudo tar xf ldc2-${LDC_VER}-linux-x86_64.tar.gz -C /usr/local/
     - LDC_BIN=/usr/local/ldc2-${LDC_VER}-linux-x86_64/bin/ldc2
-script: make
+script: 
+    - dub test --compiler=dmd -c library-nonet
+    - dub test --compiler=${GDC_BIN} -c library-nonet
+    - dub test --compiler=${LDC_BIN} -c library-nonet
+    - dub build
+    - DUB=`pwd`/bin/dub COMPILER=gdc make
