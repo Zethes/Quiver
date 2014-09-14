@@ -1,6 +1,6 @@
 DCC=gdc
 DFLAGS=
-LIBS=-lncursesw
+LIBS=-lncurses
 SRCDIR=src
 OBJDIR=obj
 SRC=$(shell find $(SRCDIR) -name '*.d')
@@ -16,6 +16,7 @@ debug: DFLAGS += -g
 debug: $(OUT)
 
 $(OUT): $(OBJ)
+		mkdir -p bin
 		$(DCC) $(DFLAGS) -o $@ $(OBJ) $(LIBS)
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.d
