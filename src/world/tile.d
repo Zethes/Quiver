@@ -1,12 +1,17 @@
 module world.tile;
 
+enum TileIds
+{
+	WALL
+};
+
 class Tile
 {
-	this(int id, int x, int y) 
+	this(TileIds id, int x, int y) 
 	{
-		this->id = id;
-		this->x = x;
-		this->y = y;
+		this.id = id;
+		this.x = x;
+		this.y = y;
 	}
 
 	char GetSymbol() 
@@ -14,10 +19,10 @@ class Tile
 		return '?';
 	}
 
-	@property int Id() { return id; }
+	@property TileIds Id() { return id; }
 	@property int X() { return x; }
 	@property int Y() { return y; }
 private:
-	int id;
+	TileIds id;
 	int x, y;
 };
