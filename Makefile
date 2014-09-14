@@ -2,9 +2,8 @@ DCC=gdc
 DFLAGS=
 LIBS=-lncurses
 SRCDIR=src
-OBJDIR=obj
 SRC=$(shell find $(SRCDIR) -name '*.d')
-OBJ=$(SRC:**/%.d=$(OBJDIR)/%.o)
+OBJ=$(SRC:**/%.d=.o)
 OUT=bin/quiver
 
 .PHONY: all debug clean
