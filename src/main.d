@@ -6,8 +6,7 @@ int main(string[] argv)
     WINDOW* win = initscr();
     printw("Hello world!");
     wrefresh(win);
-    int ch = getch();
-    while (true){}
+    wgetch(win);
     endwin();
 
     return 0;
