@@ -46,6 +46,7 @@ private:
         mainWindow = new Window(initscr());
         timeout(0);
         noecho();
+        curs_set(0);
     }
 
     void cleanup()

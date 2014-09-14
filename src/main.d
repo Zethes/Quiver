@@ -8,6 +8,7 @@ int main(string[] argv)
 {
     Screen screen = new Screen;
     Window window = screen.getMainWindow();
+    Window childWindow = new Window(VectorI(5, 5), 15, 3);
 
     // Main loop
     bool running = true;
@@ -23,13 +24,18 @@ int main(string[] argv)
             }
         }
 
-        // Draw window
+        // Draw main window
         VectorI screenSize = window.getSize();
         window.clear();
         window.print("Welcome to Quiver v0.01!\n");
         window.print("Screen size: " ~ screenSize.toString());
-        window.move(screenSize);
+
+        // Draw child window
+        childWindow.clear();
+        childWindow.print("test window with a lot of text in it!");
+
         window.refresh();
+        childWindow.refresh();
 
         // Sleep for 16 milliseconds
         Thread.sleep(dur!("msecs")(16));
