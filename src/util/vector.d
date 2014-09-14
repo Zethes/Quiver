@@ -1,7 +1,17 @@
 module util.vector;
 
-struct Vector
+import std.string;
+
+struct Vector(T)
 {
-    float x = 0;
-    float y = 0;
-};
+    T x = 0;
+    T y = 0;
+
+    string toString() const
+    {
+        return format("%s, %s", x, y);
+    }
+}
+
+alias VectorI = Vector!(int);
+alias VectorF = Vector!(float);
