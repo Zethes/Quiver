@@ -29,8 +29,8 @@ class World
                 slot > AdjacentChunks.BOTTOM_RIGHT)
             return;
 
-        chunk[slot] = new Chunk(id);
-        chunk[slot].ClearChunk();
+        loadedChunks[slot] = new Chunk(id);
+        loadedChunks[slot].ClearChunk();
 
         //Todo: Loading chunks
     }
