@@ -1,4 +1,3 @@
 language: d
-
-script:
-    make
+compiler: gdc
+script: make
