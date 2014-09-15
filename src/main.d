@@ -1,5 +1,6 @@
 import std.stdio;
 import core.thread;
+import render.canvas;
 import render.screen;
 import render.window;
 import util.vector;
@@ -9,6 +10,11 @@ int main(string[] argv)
     Screen screen = new Screen;
     Window window = screen.getMainWindow();
     Window childWindow = new Window(VectorI(5, 5), 15, 3);
+
+    // Create canvas
+    Canvas canvas = new Canvas(15, 3);
+    VectorI pos = VectorI(2, 2);
+    canvas.at(pos) = '@';
 
     // Main loop
     bool running = true;
@@ -22,13 +28,39 @@ int main(string[] argv)
             {
                 running = false;
             }
+            if (key == 'h')
+            {
+                canvas.at(pos) = ' ';
+                pos.x -= 1;
+                canvas.at(pos) = '@';
+            }
+            if (key == 'j')
+            {
+                canvas.at(pos) = ' ';
+                pos.y += 1;
+                canvas.at(pos) = '@';
+            }
+            if (key == 'k')
+            {
+                canvas.at(pos) = ' ';
+                pos.y -= 1;
+                canvas.at(pos) = '@';
+            }
+            if (key == 'l')
+            {
+                canvas.at(pos) = ' ';
+                pos.x += 1;
+                canvas.at(pos) = '@';
+            }
         }
+
+        // Resize canvas (no-op if already that size)
+        canvas.resize(window.getSize().x, window.getSize().y);
 
         // Draw main window
         VectorI screenSize = window.getSize();
-        window.clear();
-        window.print("Welcome to Quiver v0.01!\n");
-        window.print("Screen size: " ~ screenSize.toString());
+        window.move(VectorI(0, 0));
+        window.print(canvas);
 
         // Draw child window
         childWindow.clear();
@@ -38,7 +70,7 @@ int main(string[] argv)
         childWindow.refresh();
 
         // Sleep for 16 milliseconds
-        Thread.sleep(dur!("msecs")(16));
+        Thread.sleep(dur!("msecs")(100));
     }
 
     return 0;
