@@ -1,17 +1,50 @@
 module render.canvas;
 import deimos.ncurses.ncurses;
+import render.screen;
 import std.algorithm;
 import std.conv;
 import std.math;
 import std.stdio;
 import util.vector;
 
+mixin(Screen._colorMixin);
+
+struct Block
+{
+    static const char defaultCharacter = '~';
+    static const byte defaultColor = GREEN_ON_BLACK;
+
+    char character = defaultCharacter;
+    byte color = defaultColor;
+
+    this(char character, byte color)
+    {
+        this.character = character;
+        this.color = color;
+    }
+
+    void reset()
+    {
+        character = defaultCharacter;
+        color = defaultColor;
+    }
+}
+
 class Canvas
 {
+
+    /////////////////
+    // Constructor //
+    /////////////////
+
     this(int width, int height)
     {
         resize(width, height);
     }
+
+    //////////////
+    // Resizing //
+    //////////////
 
     void resize(int width, int height)
     {
@@ -20,10 +53,9 @@ class Canvas
             return;
         }
 
-        char[] oldData = _data;
+        Block[] oldData = _data;
 
-        _data = new char[width * height];
-        _data[0 .. width * height] = ' ';
+        _data = new Block[width * height];
 
         // Copy old canvas data over
         for (int x = 0; x < min(_width, width); x++)
@@ -43,7 +75,11 @@ class Canvas
         resize(size.x, size.y);
     }
 
-    ref char at(int x, int y)
+    /////////////////
+    // Canvas Data //
+    /////////////////
+
+    ref Block at(int x, int y)
     {
         assert(x >= 0 && y >= 0 && x < _width && y < _height,
                "Cannot get canvas point (" ~ to!string(VectorI(x, y)) ~ ") for canvas size (" ~ to!string(size) ~ ")!");
@@ -51,12 +87,16 @@ class Canvas
         return _data[x + width * y];
     }
 
-    ref char at(VectorI pos)
+    ref Block at(VectorI pos)
     {
         return at(pos.x, pos.y);
     }
 
-    @property int width()
+    /////////////////////
+    // Size Properties //
+    /////////////////////
+
+    @property int width() const
     {
         return _width;
     }
@@ -66,7 +106,7 @@ class Canvas
         resize(width, _height);
     }
 
-    @property int height()
+    @property int height() const
     {
         return _height;
     }
@@ -76,7 +116,7 @@ class Canvas
         resize(_width, height);
     }
 
-    @property VectorI size()
+    @property VectorI size() const
     {
         return VectorI(width, height);
     }
@@ -89,5 +129,5 @@ class Canvas
 private:
 
     int _width, _height;
-    char[] _data;
+    Block[] _data;
 }

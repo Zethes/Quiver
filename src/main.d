@@ -1,3 +1,4 @@
+import std.conv;
 import std.stdio;
 import core.thread;
 import render.canvas;
@@ -10,14 +11,18 @@ int main(string[] argv)
     Screen screen = null;
     try
     {
+        // Initialize the screen (ncurses) and grab the main window
         screen = new Screen;
-        Window window = screen.getMainWindow();
-        Window childWindow = new Window(VectorI(5, 5), 15, 3);
+        Window window = screen.mainWindow;
+
+        // Create a child window
+        Window childWindow = new Window(VectorI(1, 1), 18, 3);
 
         // Create canvas
-        Canvas canvas = new Canvas(3, 3);
-        VectorI pos = VectorI(2, 2);
-        canvas.at(pos) = '@';
+        Canvas canvas = new Canvas(50, 50);
+        VectorI pos = VectorI(8, 6);
+        canvas.at(pos).character = '@';
+        canvas.at(pos).color = YELLOW_ON_BLACK;
 
         // Main loop
         bool running = true;
@@ -30,33 +35,39 @@ int main(string[] argv)
             int key;
             while (screen.getKey(key))
             {
+                canvas.at(pos).reset();
                 if (key == 'q')
                 {
                     running = false;
                 }
                 if (key == 'h')
                 {
-                    canvas.at(pos) = ' ';
                     pos.x -= 1;
-                    canvas.at(pos) = '@';
                 }
                 if (key == 'j')
                 {
-                    canvas.at(pos) = ' ';
                     pos.y += 1;
-                    canvas.at(pos) = '@';
                 }
                 if (key == 'k')
                 {
-                    canvas.at(pos) = ' ';
                     pos.y -= 1;
-                    canvas.at(pos) = '@';
                 }
                 if (key == 'l')
                 {
-                    canvas.at(pos) = ' ';
                     pos.x += 1;
-                    canvas.at(pos) = '@';
+                }
+                pos.clamp(VectorI(0, 0), window.size - VectorI.one);
+                canvas.at(pos).character = '@';
+                canvas.at(pos).color = YELLOW_ON_BLACK;
+            }
+
+            // Print color table
+            for (int i = 0; i < 8; i++)
+            {
+                for (int j = 0; j < 8; j++)
+                {
+                    canvas.at(j + 20, i + 20).character = 'W';
+                    canvas.at(j + 20, i + 20).color = cast(byte)(i + 8 * j + 1);
                 }
             }
 
@@ -66,25 +77,27 @@ int main(string[] argv)
 
             // Draw child window
             childWindow.clear();
-            childWindow.print("test window with a lot of text in it!");
+            childWindow.print("welcome to quiver!move with hjkl!\npress q to quit!");
 
             // Refresh screen
             window.refresh();
             childWindow.refresh();
 
             // Sleep for 16 milliseconds
-            Thread.sleep(dur!("msecs")(1));
+            Thread.sleep(dur!("msecs")(16));
         }
 
         return 0;
     }
     catch (Error e)
     {
+        // Close ncurses so that the error message will print to stdout
         if (screen)
         {
-            screen.cleanup();
+            screen.close();
         }
 
+        // Print error and quit
         writeln(e);
         return -1;
     }

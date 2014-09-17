@@ -3,8 +3,42 @@ import std.string;
 
 struct Vector(T)
 {
+    static const Vector!T one;
+
+    static this()
+    {
+        one = Vector!T(1);
+    }
+
     T x = 0;
     T y = 0;
+
+    this(T value)
+    {
+        x = y = value;
+    }
+
+    this(T x, T y)
+    {
+        this.x = x;
+        this.y = y;
+    }
+
+    Vector!T opBinary(string op)(const Vector!T rhs) const
+    {
+        static if (op == "+")
+        {
+            return Vector!T(x + rhs.x, y + rhs.y);
+        }
+        else static if(op == "-")
+        {
+            return Vector!T(x - rhs.x, y - rhs.y);
+        }
+        else
+        {
+            static assert(false, "Operator " ~ op ~ " not implemented.");
+        }
+    }
 
     string toString() const
     {
@@ -14,6 +48,14 @@ struct Vector(T)
     T product()
     {
         return x * y;
+    }
+
+    void clamp(Vector!T min, Vector!T max)
+    {
+        if (x < min.x) x = min.x;
+        if (y < min.y) y = min.y;
+        if (x > max.x) x = max.x;
+        if (y > max.y) y = max.y;
     }
 }
 

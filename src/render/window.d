@@ -11,6 +11,7 @@ class Window
         handle = newwin(height, width, position.x, position.y);
         box(handle, 0, 0);
         refresh();
+        wattron(handle, COLOR_PAIR(2));
     }
 
     this(WINDOW* handle)
@@ -35,9 +36,11 @@ class Window
         wmove(handle, pos.y, pos.x);
     }
 
-    void print(T)(T object)
+    void print(T)(T object, byte color = WHITE_ON_BLACK)
     {
+        wattron(handle, COLOR_PAIR(color));
         wprintw(handle, toStringz(format("%s", object)));
+        wattroff(handle, COLOR_PAIR(color));
     }
 
     void print(T : Canvas)(T canvas)
@@ -46,7 +49,8 @@ class Window
         {
             for (int w = 0; w < canvas.width; w++)
             {
-                print(canvas.at(w, h));
+                Block block = canvas.at(w, h);
+                print(block.character, block.color);
             }
             if (getcurx(handle) != 0)
             {
