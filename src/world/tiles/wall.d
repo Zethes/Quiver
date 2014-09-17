@@ -3,13 +3,13 @@ import world.tile;
 
 class Wall : Tile
 {
-	this(int x, int y)
-	{
-		super(TileIds.WALL, x, y);
-	}
+    this(int x, int y)
+    {
+        super(TileIds.WALL, x, y);
+    }
 
-	override char GetSymbol() 
-	{
-		return '#';
-	}
+    override char GetSymbol() 
+    {
+        return '#';
+    }
 }
