@@ -22,8 +22,7 @@ class Window
     {
         wmove(handle, 0, 0);
 
-        int size = getSize().product();
-        char[] text = new char[size];
+        char[] text = new char[size.product()];
         text[] = ' ';
 
         print(text);
@@ -61,10 +60,10 @@ class Window
         wrefresh(handle);
     }
 
-    VectorI getSize()
+    @property VectorI size() const
     {
         VectorI size;
-        getmaxyx(handle, size.y, size.x);
+        getmaxyx(cast(WINDOW*)handle, size.y, size.x);
         size.x++;
         size.y++;
         return size;

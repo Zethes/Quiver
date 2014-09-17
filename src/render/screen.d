@@ -18,6 +18,11 @@ class Screen
         cleanup();
     }
 
+    void cleanup()
+    {
+        endwin();
+    }
+
     Window getMainWindow()
     {
         return mainWindow;
@@ -47,10 +52,5 @@ private:
         timeout(0);
         noecho();
         curs_set(0);
-    }
-
-    void cleanup()
-    {
-        endwin();
     }
 }

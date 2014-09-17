@@ -1,6 +1,7 @@
 module render.canvas;
 import deimos.ncurses.ncurses;
 import std.algorithm;
+import std.conv;
 import std.math;
 import std.stdio;
 import util.vector;
@@ -37,9 +38,15 @@ class Canvas
         _height = height;
     }
 
+    void resize(const VectorI size)
+    {
+        resize(size.x, size.y);
+    }
+
     ref char at(int x, int y)
     {
-        assert(_data.length > x + _width * y);
+        assert(x >= 0 && y >= 0 && x < _width && y < _height,
+               "Cannot get canvas point (" ~ to!string(VectorI(x, y)) ~ ") for canvas size (" ~ to!string(size) ~ ")!");
 
         return _data[x + width * y];
     }
@@ -68,7 +75,19 @@ class Canvas
     {
         resize(_width, height);
     }
+
+    @property VectorI size()
+    {
+        return VectorI(width, height);
+    }
+
+    @property void size(const VectorI value)
+    {
+        resize(value);
+    }
+
 private:
+
     int _width, _height;
     char[] _data;
 }
