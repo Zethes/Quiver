@@ -66,11 +66,12 @@ int main(string[] argv)
         childWindow.clear();
         childWindow.print("test window with a lot of text in it!");
 
+        // Refresh screen
         window.refresh();
         childWindow.refresh();
 
         // Sleep for 16 milliseconds
-        Thread.sleep(dur!("msecs")(100));
+        Thread.sleep(dur!("msecs")(1));
     }
 
     return 0;

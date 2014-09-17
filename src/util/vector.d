@@ -1,5 +1,4 @@
 module util.vector;
-
 import std.string;
 
 struct Vector(T)
@@ -10,6 +9,11 @@ struct Vector(T)
     string toString() const
     {
         return format("%s, %s", x, y);
+    }
+
+    T product()
+    {
+        return x * y;
     }
 }
 

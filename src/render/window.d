@@ -20,7 +20,15 @@ class Window
 
     void clear()
     {
-        wclear(handle);
+        wmove(handle, 0, 0);
+
+        int size = getSize().product();
+        char[] text = new char[size];
+        text[] = ' ';
+
+        print(text);
+
+        wmove(handle, 0, 0);
     }
 
     void move(VectorI pos)
@@ -57,6 +65,8 @@ class Window
     {
         VectorI size;
         getmaxyx(handle, size.y, size.x);
+        size.x++;
+        size.y++;
         return size;
     }
 private:
