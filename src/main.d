@@ -82,6 +82,7 @@ int main(string[] argv)
             // Refresh screen
             window.refresh();
             childWindow.refresh();
+            screen.update();
 
             // Sleep for 16 milliseconds
             Thread.sleep(dur!("msecs")(16));

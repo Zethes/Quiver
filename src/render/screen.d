@@ -101,6 +101,15 @@ class Screen
         }
     }
 
+    /////////////////////////
+    // Screen Manipulation //
+    /////////////////////////
+
+    void update()
+    {
+        doupdate();
+    }
+
 private:
 
     ///////////////////////

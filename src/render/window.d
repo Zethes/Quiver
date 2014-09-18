@@ -61,7 +61,7 @@ class Window
 
     void refresh()
     {
-        wrefresh(handle);
+        wnoutrefresh(handle);
     }
 
     @property VectorI size() const
