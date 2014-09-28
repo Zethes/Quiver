@@ -1,5 +1,6 @@
 module util.vector;
 import std.string;
+import std.traits;
 
 struct Vector(T)
 {
@@ -33,6 +34,23 @@ struct Vector(T)
         else static if(op == "-")
         {
             return Vector!T(x - rhs.x, y - rhs.y);
+        }
+        else
+        {
+            static assert(false, "Operator " ~ op ~ " not implemented.");
+        }
+    }
+
+    Vector!T opBinary(string op)(const T rhs) const
+        if (isNumeric!T)
+    {
+        static if (op == "*")
+        {
+            return Vector!T(x * rhs, y * rhs);
+        }
+        else static if(op == "/")
+        {
+            return Vector!T(x / rhs, y / rhs);
         }
         else
         {

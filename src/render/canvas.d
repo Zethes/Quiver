@@ -11,11 +11,11 @@ mixin(Screen._colorMixin);
 
 struct Block
 {
-    static const char defaultCharacter = '~';
-    static const byte defaultColor = GREEN_ON_BLACK;
+    static const char defaultCharacter = '`';
+    static const ubyte defaultColor = GREEN_ON_BLACK;
 
     char character = defaultCharacter;
-    byte color = defaultColor;
+    ubyte color = defaultColor;
 
     this(char character, byte color)
     {
@@ -37,42 +37,37 @@ class Canvas
     // Constructor //
     /////////////////
 
-    this(int width, int height)
+    this(VectorI size)
     {
-        resize(width, height);
+        resize(size);
     }
 
     //////////////
     // Resizing //
     //////////////
 
-    void resize(int width, int height)
+    void resize(VectorI size)
     {
-        if (width == _width && height == _height)
+        if (size.x == _width && size.y == _height)
         {
             return;
         }
 
         Block[] oldData = _data;
 
-        _data = new Block[width * height];
+        _data = new Block[size.x * size.y];
 
         // Copy old canvas data over
-        for (int x = 0; x < min(_width, width); x++)
+        for (int x = 0; x < min(_width, size.x); x++)
         {
-            for (int y = 0; y < min(_height, height); y++)
+            for (int y = 0; y < min(_height, size.y); y++)
             {
-                _data[x + width * y] = oldData[x + _width * y];
+                _data[x + size.x * y] = oldData[x + _width * y];
             }
         }
 
-        _width = width;
-        _height = height;
-    }
-
-    void resize(const VectorI size)
-    {
-        resize(size.x, size.y);
+        _width = size.x;
+        _height = size.y;
     }
 
     /////////////////
@@ -103,7 +98,7 @@ class Canvas
 
     @property void width(int width)
     {
-        resize(width, _height);
+        resize(VectorI(width, _height));
     }
 
     @property int height() const
@@ -113,7 +108,7 @@ class Canvas
 
     @property void height(int height)
     {
-        resize(_width, height);
+        resize(VectorI(_width, height));
     }
 
     @property VectorI size() const
@@ -130,4 +125,5 @@ private:
 
     int _width, _height;
     Block[] _data;
+
 }

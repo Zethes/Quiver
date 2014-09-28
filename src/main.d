@@ -1,90 +1,43 @@
-import std.conv;
-import std.stdio;
 import core.thread;
-import render.canvas;
 import render.screen;
-import render.window;
-import util.vector;
+import settings;
+import quiver.states.menustate;
+import std.stdio;
+import util.log;
+import util.statemachine;
 
 int main(string[] argv)
 {
+    // Process command line arguments
+    global.parseCommandLine(argv);
+
+    // Setup logging
+    newLog();
+    log("Welcome to Quiver!");
+
+    // Initialize screen pointer outside try-catch so that it can be closed on an exception
     Screen screen = null;
+
+    // Setup master try/catch for unhandled exceptions/errors
     try
     {
-        // Initialize the screen (ncurses) and grab the main window
-        screen = new Screen;
-        Window window = screen.mainWindow;
-
-        // Create a child window
-        Window childWindow = new Window(VectorI(1, 1), 18, 3);
-
-        // Create canvas
-        Canvas canvas = new Canvas(50, 50);
-        VectorI pos = VectorI(8, 6);
-        canvas.at(pos).character = '@';
-        canvas.at(pos).color = YELLOW_ON_BLACK;
-
-        // Main loop
-        bool running = true;
-        while (running)
+        // Setup screens if we're not a dedicated server
+        if (!global.serverOnly)
         {
-            // Resize canvas (no-op if already that size)
-            canvas.resize(window.size.x, window.size.y);
+            screen = new Screen;
+        }
 
-            // Do input
-            int key;
-            while (screen.getKey(key))
-            {
-                canvas.at(pos).reset();
-                if (key == 'q')
-                {
-                    running = false;
-                }
-                if (key == 'h')
-                {
-                    pos.x -= 1;
-                }
-                if (key == 'j')
-                {
-                    pos.y += 1;
-                }
-                if (key == 'k')
-                {
-                    pos.y -= 1;
-                }
-                if (key == 'l')
-                {
-                    pos.x += 1;
-                }
-                pos.clamp(VectorI(0, 0), window.size - VectorI.one);
-                canvas.at(pos).character = '@';
-                canvas.at(pos).color = YELLOW_ON_BLACK;
-            }
+        // Create finite state machine
+        StateMachine fsm;
+        fsm = new StateMachine;
 
-            // Print color table
-            for (int i = 0; i < 8; i++)
-            {
-                for (int j = 0; j < 8; j++)
-                {
-                    canvas.at(j + 20, i + 20).character = 'W';
-                    canvas.at(j + 20, i + 20).color = cast(byte)(i + 8 * j + 1);
-                }
-            }
+        // Enter menu
+        fsm.enterState(new MenuState(fsm, screen));
 
-            // Draw main window
-            window.move(VectorI(0, 0));
-            window.print(canvas);
-
-            // Draw child window
-            childWindow.clear();
-            childWindow.print("welcome to quiver!move with hjkl!\npress q to quit!");
-
-            // Refresh screen
-            window.refresh();
-            childWindow.refresh();
-            screen.update();
-
-            // Sleep for 16 milliseconds
+        // Main game loop
+        while (global.running)
+        {
+            fsm.update();
             Thread.sleep(dur!("msecs")(16));
         }
 
@@ -99,6 +52,18 @@ int main(string[] argv)
         }
 
         // Print error and quit
+        writeln(e);
+        return -1;
+    }
+    catch (Exception e)
+    {
+        // Close ncurses so that the exception message will print to stdout
+        if (screen)
+        {
+            screen.close();
+        }
+
+        // Print exception and quit
         writeln(e);
         return -1;
     }
