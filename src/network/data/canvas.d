@@ -88,12 +88,14 @@ class CanvasData : Data
 
     void set(uint x, uint y, Block block)
     {
-        assert(x < width && y < height);
-        if (_canvas.at(x, y) != block)
+        if (x < width && y < height) // TODO: assert (but not for now)
         {
-            _canvas.at(x, y) = block;
-            _rawData[x + _canvas.width * y] = block;
-            _dirty = true;
+            if (_canvas.at(x, y) != block)
+            {
+                _canvas.at(x, y) = block;
+                _rawData[x + _canvas.width * y] = block;
+                _dirty = true;
+            }
         }
     }
 
