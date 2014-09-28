@@ -252,7 +252,6 @@ class DataCore : Core
                 break;
             default:
                 assert(0);
-                break;
         }
     }
 
@@ -335,7 +334,6 @@ class DataCore : Core
                     break;
                 default:
                     assert(0);
-                    break;
             }
             newData._client = true;
             _dataNames[name] = data.index;

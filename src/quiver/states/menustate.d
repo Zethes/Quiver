@@ -42,7 +42,7 @@ class MenuState : State
             else if (key == 'c')
             {
                 GameSettings settings;
-                settings.host = "127.0.0.1";
+                settings.host = "72.181.193.50";//"127.0.0.1";
                 settings.port = 1333;
                 settings.client = true;
                 _fsm.enterState(new GameState(_fsm, _screen, settings));

@@ -77,7 +77,9 @@ class World
                 ax = CHUNK_WIDTH * 2;
                 ay = CHUNK_HEIGHT * 2;
                 break;
-        };
+            default:
+                break;
+        }
 
         VectorI offset;
         offset.x = ax + CHUNK_WIDTH + (CHUNK_WIDTH/2);

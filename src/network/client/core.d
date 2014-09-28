@@ -171,7 +171,6 @@ class ClientCore : Core
                 break;
             default:
                 assert(0);
-                break;
         }
     }
 
