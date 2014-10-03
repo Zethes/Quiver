@@ -97,7 +97,7 @@ private:
 struct ListenManager(Interface)
 {
 
-    void fire(string func, T)(T event)
+    void fire(string func, T)(ref T event)
     {
         foreach (listener; _listeners)
         {

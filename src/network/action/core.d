@@ -22,6 +22,14 @@ class ActionCore : Core
         }
     }
 
+    void ping(uint unique, ushort to = ushort.max)
+    {
+        auto packet = new PacketActionPing;
+        packet.to = to;
+        packet.data.unique = unique;
+        packetQueue.queue(packet);
+    }
+
     void sendKey(int key)
     {
         assert(isClient);
@@ -48,6 +56,10 @@ class ActionCore : Core
                 assert(packet.length == PacketInitResponse.Data.sizeof);
                 processPacket(packet, *(cast(PacketInitResponse.Data*)packet.rawData));
                 break;
+            case PACKET_ACTION_PING:
+                assert(packet.length == PacketActionPing.Data.sizeof);
+                processPacket(packet, *(cast(PacketActionPing.Data*)packet.rawData));
+                break;
             case PACKET_ACTION_KEY:
                 assert(packet.length == PacketActionKey.Data.sizeof);
                 processPacket(packet, *(cast(PacketActionKey.Data*)packet.rawData));
@@ -71,6 +83,39 @@ class ActionCore : Core
         assert(isClient);
 
         _ready = true;
+    }
+
+    void processPacket(Packet packet, PacketActionPing.Data data)
+    {
+        if (data.pong)
+        {
+            ActionPongEvent event;
+            event.unique = data.unique;
+            _listen.fire!"onActionPong"(event);
+
+            if (event.repeat)
+            {
+                auto ping = new PacketActionPing;
+                ping.to = packet.from;
+                ping.data.unique = data.unique;
+                packetQueue.queue(ping);
+            }
+        }
+        else
+        {
+            ActionPingEvent event;
+            event.unique = data.unique;
+            _listen.fire!"onActionPing"(event);
+
+            if (!event.cancel)
+            {
+                auto pong = new PacketActionPing;
+                pong.to = packet.from;
+                pong.data.unique = data.unique;
+                pong.data.pong = true;
+                packetQueue.queue(pong);
+            }
+        }
     }
 
     void processPacket(Packet packet, PacketActionKey.Data data)
@@ -109,7 +154,8 @@ enum
 {
     PACKET_INIT          = 0,
     PACKET_INIT_RESPONSE = 1,
-    PACKET_ACTION_KEY    = 2
+    PACKET_ACTION_PING   = 2,
+    PACKET_ACTION_KEY    = 3
 }
 
 class PacketInit : Packet
@@ -182,8 +228,46 @@ class PacketInitResponse : Packet
 
 }
 
+class PacketActionPing : Packet
+{
+
+    this()
+    {
+        super(Data.sizeof);
+        *(cast(Data*)_data) = Data.init;
+
+        header.packet = PACKET_ACTION_PING;
+    }
+
+    struct Data
+    {
+
+        PacketHeader header;
+        uint unique = uint.max;
+        bool pong = false;
+
+        void swap(bool swapHeader)
+        {
+            if (swapHeader)
+            {
+                header.swap();
+            }
+
+            // TODO: endian swapping
+        }
+
+    }
+
+    @property ref Data data()
+    {
+        return *(cast(Data*)_data);
+    }
+
+}
+
 class PacketActionKey : Packet
 {
+
     this()
     {
         super(Data.sizeof);
