@@ -1,4 +1,5 @@
 module settings;
+import std.stdio;
 
 import util.log;
 
@@ -21,6 +22,14 @@ struct Settings
             else if (argv[i] == "-client")
             {
                 clientOnly = true;
+            }
+            else if (argv[i] == "--help" || argv[i] == "-h")
+            {
+                writeln("usage: ", argv[0], " [options]");
+                writeln("Options:");
+                writeln("-server \t\t run a dedicated server.");
+                writeln("-client \t\t run a client only.");
+                error = true;
             }
             else
             {

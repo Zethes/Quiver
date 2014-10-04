@@ -5,11 +5,14 @@ import quiver.states.menustate;
 import std.stdio;
 import util.log;
 import util.statemachine;
+import world.world;
 
 int main(string[] argv)
 {
     // Process command line arguments
     global.parseCommandLine(argv);
+    if (global.error)
+        return 1;
 
     // Setup logging
     newLog();
