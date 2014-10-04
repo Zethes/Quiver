@@ -1,13 +1,12 @@
 module quiver.game;
 
-import game.game;
 import Net = network;
 import render.canvas;
 import std.conv;
 import util.log;
 import util.vector;
 
-class ActionListener : Net.ActionListener
+private class ActionListener : Net.ActionListener
 {
     this(QuiverGame game)
     {

@@ -1,6 +1,5 @@
 module quiver.client;
 
-import client.client;
 import Net = network;
 import render.canvas;
 import render.screen;
