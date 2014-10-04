@@ -66,7 +66,6 @@ class ActionCore : Core
                 break;
             default:
                 assert(0);
-                break;
         }
     }
 

@@ -2,3 +2,6 @@ bin/
 *.swp
 *.o
 *.log
+*.dub/
+quiver
+dub.selections.json
