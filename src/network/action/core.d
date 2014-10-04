@@ -44,7 +44,7 @@ class ActionCore : Core
         return _ready;
     }
 
-    override void processPacket(Packet packet)
+    override void processPacket(PacketBase packet)
     {
         switch (packet.header.packet)
         {
@@ -70,7 +70,7 @@ class ActionCore : Core
         }
     }
 
-    void processPacket(Packet packet, PacketInit.Data data)
+    void processPacket(PacketBase packet, PacketInit.Data data)
     {
         assert(isServer);
 
@@ -78,14 +78,14 @@ class ActionCore : Core
         packetQueue.queue(response);
     }
 
-    void processPacket(Packet packet, PacketInitResponse.Data data)
+    void processPacket(PacketBase packet, PacketInitResponse.Data data)
     {
         assert(isClient);
 
         _ready = true;
     }
 
-    void processPacket(Packet packet, PacketActionPing.Data data)
+    void processPacket(PacketBase packet, PacketActionPing.Data data)
     {
         if (data.pong)
         {
@@ -118,7 +118,7 @@ class ActionCore : Core
         }
     }
 
-    void processPacket(Packet packet, PacketActionKey.Data data)
+    void processPacket(PacketBase packet, PacketActionKey.Data data)
     {
         assert(isServer);
 
@@ -158,7 +158,24 @@ enum
     PACKET_ACTION_KEY    = 3
 }
 
-class PacketInit : Packet
+struct PacketInitData
+{
+
+    PacketHeader header;
+
+    void swap(bool swapHeader)
+    {
+        if (swapHeader)
+        {
+            header.swap();
+        }
+
+        // TODO: endian swapping
+    }
+
+}
+
+class PacketInit : Packet!PacketInitData
 {
 
     this()
@@ -169,32 +186,28 @@ class PacketInit : Packet
         header.packet = PACKET_INIT;
     }
 
-    struct Data
+}
+
+struct PacketInitResponseData
+{
+
+    PacketHeader header;
+
+    void swap(bool swapHeader)
     {
-
-        PacketHeader header;
-
-        void swap(bool swapHeader)
+        if (swapHeader)
         {
-            if (swapHeader)
-            {
-                header.swap();
-            }
-
-            // TODO: endian swapping
+            header.swap();
         }
 
-    }
-
-    @property ref Data data()
-    {
-        return *(cast(Data*)_data);
+        // TODO: endian swapping
     }
 
 }
 
-class PacketInitResponse : Packet
+class PacketInitResponse : Packet!PacketInitResponseData
 {
+
     this(ushort to)
     {
         super(Data.sizeof);
@@ -204,31 +217,28 @@ class PacketInitResponse : Packet
         _to = to;
     }
 
-    struct Data
+}
+
+struct PacketActionPingData
+{
+
+    PacketHeader header;
+    uint unique = uint.max;
+    bool pong = false;
+
+    void swap(bool swapHeader)
     {
-
-        PacketHeader header;
-
-        void swap(bool swapHeader)
+        if (swapHeader)
         {
-            if (swapHeader)
-            {
-                header.swap();
-            }
-
-            // TODO: endian swapping
+            header.swap();
         }
 
-    }
-
-    @property ref Data data()
-    {
-        return *(cast(Data*)_data);
+        // TODO: endian swapping
     }
 
 }
 
-class PacketActionPing : Packet
+class PacketActionPing : Packet!PacketActionPingData
 {
 
     this()
@@ -239,33 +249,27 @@ class PacketActionPing : Packet
         header.packet = PACKET_ACTION_PING;
     }
 
-    struct Data
+}
+
+struct PacketActionKeyData
+{
+
+    PacketHeader header;
+    int key;
+
+    void swap(bool swapHeader)
     {
-
-        PacketHeader header;
-        uint unique = uint.max;
-        bool pong = false;
-
-        void swap(bool swapHeader)
+        if (swapHeader)
         {
-            if (swapHeader)
-            {
-                header.swap();
-            }
-
-            // TODO: endian swapping
+            header.swap();
         }
 
-    }
-
-    @property ref Data data()
-    {
-        return *(cast(Data*)_data);
+        // TODO: endian swapping
     }
 
 }
 
-class PacketActionKey : Packet
+class PacketActionKey : Packet!PacketActionKeyData
 {
 
     this()
@@ -274,29 +278,6 @@ class PacketActionKey : Packet
         *(cast(Data*)_data) = Data.init;
 
         header.packet = PACKET_ACTION_KEY;
-    }
-
-    struct Data
-    {
-
-        PacketHeader header;
-        int key;
-
-        void swap(bool swapHeader)
-        {
-            if (swapHeader)
-            {
-                header.swap();
-            }
-
-            // TODO: endian swapping
-        }
-
-    }
-
-    @property ref Data data()
-    {
-        return *(cast(Data*)_data);
     }
 
 }

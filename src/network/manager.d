@@ -171,7 +171,7 @@ abstract class ManagerBase
         return _groupController;
     }
 
-    Packet[] receivePackets()
+    PacketBase[] receivePackets()
     {
         return null;
     }
@@ -193,7 +193,7 @@ abstract class ManagerBase
         return ushort.max;
     }
 
-    void routePacket(Packet packet)
+    void routePacket(PacketBase packet)
     {
         PacketHeader* header = packet.header;
         assert(packet.from != ushort.max);
@@ -207,7 +207,7 @@ abstract class ManagerBase
         toCore.packetQueue.inbox ~= packet;
     }
 
-    void sendMessage(Core fromCore, Packet packet)
+    void sendMessage(Core fromCore, PacketBase packet)
     {
         PacketHeader* header = packet.header;
 
@@ -259,8 +259,8 @@ abstract class ManagerBase
     void processInbox()
     {
         // Receive network messages
-        Packet[] packets = receivePackets();
-        foreach (Packet packet; packets)
+        PacketBase[] packets = receivePackets();
+        foreach (PacketBase packet; packets)
         {
             routePacket(packet);
         }
@@ -277,7 +277,7 @@ abstract class ManagerBase
         foreach (core; _cores)
         {
             PacketQueue queue = core.packetQueue;
-            foreach (Packet packet; queue.outbox)
+            foreach (PacketBase packet; queue.outbox)
             {
                 sendMessage(core, packet);
             }
@@ -483,10 +483,10 @@ class Manager(ManagerType type) : ManagerBase
         return index;
     }
 
-    override Packet[] receivePackets()
+    override PacketBase[] receivePackets()
     {
         // A resulting list of packets
-        Packet[] data = null;
+        PacketBase[] data = null;
 
         // Iterate over all the active connections
         for (ushort i = 0; i < _connections.length; i++)
@@ -520,7 +520,7 @@ class Manager(ManagerType type) : ManagerBase
                         PacketHeader* header = cast(PacketHeader*)con.packetData;
                         if (header.length <= con.packetData.length)
                         {
-                            Packet newPacket = new Packet(con.packetData[0 .. header.length].dup);
+                            PacketBase newPacket = new PacketBase(con.packetData[0 .. header.length].dup);
                             newPacket.from = con.id;
                             data ~= newPacket;
                             con.packetData = con.packetData[header.length .. $];

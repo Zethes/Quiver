@@ -64,7 +64,7 @@ abstract class Core
 
     void processInbox()
     {
-        foreach (Packet packet; packetQueue.inbox)
+        foreach (PacketBase packet; packetQueue.inbox)
         {
             // Get packet header
             PacketHeader header = *(cast(PacketHeader*)packet.rawData);
@@ -75,7 +75,7 @@ abstract class Core
         packetQueue.inbox.length = 0;
     }
 
-    void processPacket(Packet packet)
+    void processPacket(PacketBase packet)
     {
     }
 

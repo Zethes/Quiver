@@ -3,7 +3,7 @@ module network.messaging;
 import std.conv;
 import util.log;
 
-class Packet
+class PacketBase
 {
 
     this(size_t dataLength)
@@ -99,7 +99,7 @@ class Packet
     ubyte[] getExtra(T)()
         if (is(T == struct))
     {
-        return Packet.getExtra(T.sizeof);
+        return PacketBase.getExtra(T.sizeof);
     }
 
 protected:
@@ -109,6 +109,23 @@ protected:
     bool _exclude = false;
     uint _toGroup = uint.max;
     ubyte[] _data;
+
+}
+
+class Packet(T) : PacketBase
+{
+
+    this(size_t dataLength)
+    {
+        super(dataLength);
+    }
+
+    alias Data = T;
+
+    @property ref Data data()
+    {
+        return *(cast(Data*)_data);
+    }
 
 }
 
@@ -168,19 +185,19 @@ class PacketQueue
         _outbox ~= packet;
     }
 
-    @property ref Packet[] outbox()
+    @property ref PacketBase[] outbox()
     {
         return _outbox;
     }
 
-    @property ref Packet[] inbox()
+    @property ref PacketBase[] inbox()
     {
         return _inbox;
     }
 
 private:
 
-    Packet[] _outbox;
-    Packet[] _inbox;
+    PacketBase[] _outbox;
+    PacketBase[] _inbox;
 
 }
