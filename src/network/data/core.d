@@ -222,7 +222,7 @@ class DataCore : Core
         return _ready;
     }
 
-    override void processPacket(PacketBase packet)
+    override void processPacket(Packet packet)
     {
         switch (packet.header.packet)
         {
@@ -255,7 +255,7 @@ class DataCore : Core
         }
     }
 
-    void processPacket(PacketBase packet, PacketInit.Data data)
+    void processPacket(Packet packet, PacketInit.Data data)
     {
         assert(isServer);
 
@@ -263,14 +263,14 @@ class DataCore : Core
         packetQueue.queue(response);
     }
 
-    void processPacket(PacketBase packet, PacketInitResponse.Data data)
+    void processPacket(Packet packet, PacketInitResponse.Data data)
     {
         assert(isClient);
 
         _ready = true;
     }
 
-    void processPacket(PacketBase packet, PacketRequest.Data data)
+    void processPacket(Packet packet, PacketRequest.Data data)
     {
         assert(isServer);
         assert(data.nameLength <= data.name.length);
@@ -315,7 +315,7 @@ class DataCore : Core
         }
     }
 
-    void processPacket(PacketBase packet, PacketRequestResponse.Data data)
+    void processPacket(Packet packet, PacketRequestResponse.Data data)
     {
         assert(isClient);
 
@@ -347,7 +347,7 @@ class DataCore : Core
         _listen.fire!"onDataResponse"(event);
     }
 
-    void processPacket(PacketBase packet, PacketDataUpdate.Data data, ubyte[] leftover)
+    void processPacket(Packet packet, PacketDataUpdate.Data data, ubyte[] leftover)
     {
         assert(isClient);
         assert(packet.header.length == PacketDataUpdate.Data.sizeof + data.dataLength);
@@ -358,7 +358,7 @@ class DataCore : Core
         dataObject.updateData(leftover);
     }
 
-    void processPacket(PacketBase packet, PacketDataProperty.Data data)
+    void processPacket(Packet packet, PacketDataProperty.Data data)
     {
         Data* dataObject = data.index in _dataMap;
         assert(dataObject !is null);
@@ -485,7 +485,7 @@ struct PacketInitData
 
 }
 
-class PacketInit : Packet!PacketInitData
+class PacketInit : PacketDefinition!PacketInitData
 {
 
     this()
@@ -515,7 +515,7 @@ struct PacketInitResponseData
 
 }
 
-class PacketInitResponse : Packet!PacketInitResponseData
+class PacketInitResponse : PacketDefinition!PacketInitResponseData
 {
 
     this(ushort to)
@@ -548,7 +548,7 @@ struct PacketRequestData
 
 }
 
-class PacketRequest : Packet!PacketRequestData
+class PacketRequest : PacketDefinition!PacketRequestData
 {
 
     this()
@@ -583,7 +583,7 @@ struct PacketRequestResponseData
 
 }
 
-class PacketRequestResponse : Packet!PacketRequestResponseData
+class PacketRequestResponse : PacketDefinition!PacketRequestResponseData
 {
 
     this(ushort to)
@@ -616,7 +616,7 @@ struct PacketDataUpdateData
 
 }
 
-class PacketDataUpdate : Packet!PacketDataUpdateData
+class PacketDataUpdate : PacketDefinition!PacketDataUpdateData
 {
 
     this(uint to)
@@ -650,7 +650,7 @@ struct PacketDataPropertyData
 
 }
 
-class PacketDataProperty : Packet!PacketDataPropertyData
+class PacketDataProperty : PacketDefinition!PacketDataPropertyData
 {
 
     this(uint to, bool group)
