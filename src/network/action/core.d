@@ -44,7 +44,7 @@ class ActionCore : Core
         return _ready;
     }
 
-    override void processPacket(PacketBase packet)
+    override void processPacket(Packet packet)
     {
         switch (packet.header.packet)
         {
@@ -69,7 +69,7 @@ class ActionCore : Core
         }
     }
 
-    void processPacket(PacketBase packet, PacketInit.Data data)
+    void processPacket(Packet packet, PacketInit.Data data)
     {
         assert(isServer);
 
@@ -77,14 +77,14 @@ class ActionCore : Core
         packetQueue.queue(response);
     }
 
-    void processPacket(PacketBase packet, PacketInitResponse.Data data)
+    void processPacket(Packet packet, PacketInitResponse.Data data)
     {
         assert(isClient);
 
         _ready = true;
     }
 
-    void processPacket(PacketBase packet, PacketActionPing.Data data)
+    void processPacket(Packet packet, PacketActionPing.Data data)
     {
         if (data.pong)
         {
@@ -117,7 +117,7 @@ class ActionCore : Core
         }
     }
 
-    void processPacket(PacketBase packet, PacketActionKey.Data data)
+    void processPacket(Packet packet, PacketActionKey.Data data)
     {
         assert(isServer);
 
@@ -174,7 +174,7 @@ struct PacketInitData
 
 }
 
-class PacketInit : Packet!PacketInitData
+class PacketInit : PacketDefinition!PacketInitData
 {
 
     this()
@@ -204,7 +204,7 @@ struct PacketInitResponseData
 
 }
 
-class PacketInitResponse : Packet!PacketInitResponseData
+class PacketInitResponse : PacketDefinition!PacketInitResponseData
 {
 
     this(ushort to)
@@ -237,7 +237,7 @@ struct PacketActionPingData
 
 }
 
-class PacketActionPing : Packet!PacketActionPingData
+class PacketActionPing : PacketDefinition!PacketActionPingData
 {
 
     this()
@@ -268,7 +268,7 @@ struct PacketActionKeyData
 
 }
 
-class PacketActionKey : Packet!PacketActionKeyData
+class PacketActionKey : PacketDefinition!PacketActionKeyData
 {
 
     this()

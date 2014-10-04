@@ -141,7 +141,7 @@ class ClientCore : Core
         return clients;
     }
 
-    override void processPacket(PacketBase packet)
+    override void processPacket(Packet packet)
     {
         switch (packet.header.packet)
         {
@@ -174,7 +174,7 @@ class ClientCore : Core
         }
     }
 
-    void processPacket(PacketBase packet, PacketInit.Data data)
+    void processPacket(Packet packet, PacketInit.Data data)
     {
         assert(isServer);
 
@@ -196,7 +196,7 @@ class ClientCore : Core
         }
     }
 
-    void processPacket(PacketBase packet, PacketInitResponse.Data data)
+    void processPacket(Packet packet, PacketInitResponse.Data data)
     {
         assert(isClient);
 
@@ -205,7 +205,7 @@ class ClientCore : Core
         _ready = true;
     }
 
-    void processPacket(PacketBase packet, PacketRegister.Data data)
+    void processPacket(Packet packet, PacketRegister.Data data)
     {
         assert(isServer);
 
@@ -250,7 +250,7 @@ class ClientCore : Core
         }
     }
 
-    void processPacket(PacketBase packet, PacketRegisterResponse.Data data)
+    void processPacket(Packet packet, PacketRegisterResponse.Data data)
     {
         assert(isClient);
 
@@ -265,7 +265,7 @@ class ClientCore : Core
         _listen.fire!"onClientRegistered"(event);
     }
 
-    void processPacket(PacketBase packet, PacketClientJoin.Data data)
+    void processPacket(Packet packet, PacketClientJoin.Data data)
     {
         _clients[data.index] = new Client(data.name[0 .. data.nameLength]);
 
@@ -275,7 +275,7 @@ class ClientCore : Core
         _listen.fire!"onClientJoin"(event);
     }
 
-    void processPacket(PacketBase packet, PacketClientLeft.Data data)
+    void processPacket(Packet packet, PacketClientLeft.Data data)
     {
         ClientLeftEvent event;
         event.index = data.index;
@@ -347,7 +347,7 @@ struct PacketInitData
     }
 }
 
-class PacketInit : Packet!PacketInitData
+class PacketInit : PacketDefinition!PacketInitData
 {
 
     this()
@@ -378,7 +378,7 @@ struct PacketInitResponseData
 
 }
 
-class PacketInitResponse : Packet!PacketInitResponseData
+class PacketInitResponse : PacketDefinition!PacketInitResponseData
 {
 
     this(ushort to)
@@ -411,7 +411,7 @@ struct PacketRegisterData
 
 }
 
-class PacketRegister : Packet!PacketRegisterData
+class PacketRegister : PacketDefinition!PacketRegisterData
 {
 
     this()
@@ -445,7 +445,7 @@ struct PacketRegisterResponseData
 
 }
 
-class PacketRegisterResponse : Packet!PacketRegisterResponseData
+class PacketRegisterResponse : PacketDefinition!PacketRegisterResponseData
 {
 
     this(ushort to)
@@ -480,7 +480,7 @@ struct PacketClientJoinData
 
 }
 
-class PacketClientJoin : Packet!PacketClientJoinData
+class PacketClientJoin : PacketDefinition!PacketClientJoinData
 {
 
     this(ushort to)
@@ -512,7 +512,7 @@ struct PacketClientLeftData
 
 }
 
-class PacketClientLeft : Packet!PacketClientLeftData
+class PacketClientLeft : PacketDefinition!PacketClientLeftData
 {
 
     this()
