@@ -57,6 +57,12 @@ class Colors
         }
     }
 
+    //RGB (1 - 1000)
+    static void changeColor(ushort id, ushort r, ushort g, ushort b)
+    {
+        init_color(id, r, g, b);
+    }
+
     static void setColor(ushort c)
     {
         attron(COLOR_PAIR(c)); 
