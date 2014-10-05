@@ -1,4 +1,5 @@
 module quiver.client;
+import quiver.ui;
 
 import Net = network;
 import render.canvas;
@@ -92,6 +93,9 @@ class QuiverClient : Net.ClientManager
     override void init()
     {
         clientCore.registerClient("Player");
+        UI.register("Chat", new ChatWindow(_screen.mainWindow.size));
+
+        (cast(ChatWindow)UI.getWindow("Chat")).addMessage(ChatMessageTypes.clientMessage, "Loading...");
     }
 
     override void update()
@@ -134,8 +138,11 @@ class QuiverClient : Net.ClientManager
 
                 _canvasData.width = _screen.mainWindow.size.x;
                 _canvasData.height = _screen.mainWindow.size.y;
+
             }
+
             _screen.mainWindow.refresh();
+            UI.draw();
             _screen.update();
         }
     }

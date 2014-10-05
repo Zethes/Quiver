@@ -82,7 +82,8 @@ class Window
 
     void addBorder()
     {
-        wborder(_handle, '|', '|', '-', '-', '+', '+', '+', '+');
+        //wborder(_handle, '|', '|', '-', '-', '+', '+', '+', '+');
+        box(_handle, 0, 0);
     }
 
     void refresh()
