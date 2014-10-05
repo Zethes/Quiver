@@ -53,9 +53,9 @@ class Window
 
     void print(T)(T object, byte color = WHITE_ON_BLACK)
     {
-        wattron(_handle, COLOR_PAIR(color));
+//        wattron(_handle, COLOR_PAIR(color));
         wprintw(_handle, toStringz(format("%s", object)));
-        wattroff(_handle, COLOR_PAIR(color));
+//        wattroff(_handle, COLOR_PAIR(color));
     }
 
     void print(T : Canvas)(VectorI position, T canvas)
@@ -139,6 +139,8 @@ class Window
     {
         wmove(_handle, cursor.y, cursor.x);
     }
+
+    @property WINDOW* handle() { return handle; }
 
     void draw()
     {
