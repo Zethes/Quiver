@@ -34,30 +34,31 @@ static assert(colors.length == colorNames.length);
 
 class Colors
 {
-    static int numberOfColors()
+    static short numberOfColors()
     {
-        return tigetnum(cast(char*)"colors"); 
+        return cast(short)tigetnum(cast(char*)"colors"); 
     }
 
     static void initColors()
     {
         log("Console supports ", numberOfColors(), " colors");
-        log("Constant says it supports ", COLORS, " colors");
         use_default_colors();
 
         short pair = 1;
-        for (short i = 0; i < colors.length; i++)
+        for (short i = 0; i < numberOfColors(); ++i)
         {
-            for (short j = 0; j < colors.length; j++)
+            for (short j = 0; j < numberOfColors(); ++j)
             {
-                init_pair(pair++, colors[(j + 1) % colors.length], colors[i]);
+                if (i < colors.length && j < colors.length)
+                    init_pair(pair++, colors[(j+1) % colors.length], colors[i]);
+                else
+                    init_pair(pair++, i, j);
             }
         }
     }
 
     static void setColor(ushort c)
     {
-        // TODO: 256 colors?
         attron(COLOR_PAIR(c)); 
     }
 
@@ -103,6 +104,22 @@ class Colors
     // Developer tool:
     static void drawPallete(Window win)
     {
+        if (numberOfColors() > 8)
+        {
+            win.clear();
+            ushort n = 0;
+            for (int i = 0; i < numberOfColors(); i += 8)
+            {
+                for (int j = 0; j < 8; ++j)
+                {
+                    win.print(format("%x\t", n), n++);
+                }
+                win.print("\n");
+            }
+            win.refresh();
+            return;
+        }
+
         win.clear();
         win.print("        ");
         for (int i = 0; i < colors.length; ++i)
