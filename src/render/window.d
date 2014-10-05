@@ -1,6 +1,7 @@
 module render.window;
 import deimos.ncurses.ncurses;
 import render.canvas;
+import render.colors;
 import std.conv;
 import std.string;
 import util.vector;

@@ -1,5 +1,6 @@
 import core.thread;
 import render.screen;
+import render.colors;
 import settings;
 import quiver.states.menustate;
 import std.stdio;

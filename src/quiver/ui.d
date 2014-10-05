@@ -2,6 +2,7 @@ module quiver.ui;
 import render.window;
 import render.screen;
 import render.canvas;
+import render.colors;
 import util.vector;
 import util.log;
 

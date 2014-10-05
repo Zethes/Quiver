@@ -2,6 +2,7 @@ module quiver.game;
 
 import Net = network;
 import render.canvas;
+import render.colors;
 import std.conv;
 import util.log;
 import util.vector;
