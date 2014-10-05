@@ -74,7 +74,7 @@ class Colors
             throw new Exception("Failed to set the color of window");
         }
 
-        wattron(w.handle, COLOR_PAIR(cast(byte)c));
+        wattron(w.handle, COLOR_PAIR(c));
     }
 
     static void unsetColor(Window w, ushort c)
@@ -84,7 +84,7 @@ class Colors
             throw new Exception("Failed to unset the color of window");
         }
 
-        wattroff(w.handle, COLOR_PAIR(cast(byte)c));
+        wattroff(w.handle, COLOR_PAIR(c));
     }
 
     static string _colorMixin()
