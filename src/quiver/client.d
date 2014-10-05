@@ -142,7 +142,7 @@ class QuiverClient : Net.ClientManager
             }
 
             _screen.mainWindow.refresh();
-            UI.draw();
+            UI.draw(_screen.mainWindow.size);
             _screen.update();
         }
     }

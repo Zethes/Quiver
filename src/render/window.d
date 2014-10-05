@@ -114,6 +114,19 @@ class Window
         return position;
     }
 
+    @property void position(const VectorI pos)
+    {
+        VectorI oldSize = size;
+        _free();
+        _create(pos, oldSize);
+    }
+
+    void resize(const VectorI pos, const VectorI size)
+    {
+        wresize(_handle, size.y, size.x);
+        mvwin(_handle, pos.y, pos.x);
+    }
+
     @property VectorI cursor() const
     {
         VectorI result;

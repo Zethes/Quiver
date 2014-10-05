@@ -26,7 +26,7 @@ class UI
         return null;
     }
 
-    static draw()
+    static draw(VectorI screenSize)
     {
         foreach (i, win; windows)
         {
@@ -60,10 +60,9 @@ class ChatWindow : Window
     void resize(VectorI screenSize)
     {
         //TODO dynamic this shit.
-        size.x = screenSize.x;
-        size.y = 7;
-        pos.x = 0;
-        pos.y = screenSize.y - size.y;
+        size = VectorI(screenSize.x, 7);
+        pos = VectorI(0, screenSize.y - size.y);
+        super.resize(pos, size);
     }
     
     void addMessage(ChatMessageTypes type, string msg)
@@ -107,7 +106,7 @@ class ChatWindow : Window
         }
     }
 private:
-    VectorI size, pos;
+    VectorI pos, size;
     string[] messages;
     int maxMsgs;
     ChatMessageTypes[] types;
