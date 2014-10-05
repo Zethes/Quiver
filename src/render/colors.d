@@ -42,6 +42,7 @@ class Colors
     static void initColors()
     {
         log("Console supports ", numberOfColors(), " colors");
+        log("Constant says it supports ", COLORS, " colors");
         use_default_colors();
 
         short pair = 1;
@@ -117,9 +118,8 @@ class Colors
             for (ulong j = colorNames[i].length; j < colors.length; ++j) win.print(" ");
             for (int j = 0; j < colors.length; ++j)
             {
-                setColor(pair);
-                for (ulong k = 0; k < colorNames[(j+1) % colors.length].length; ++k) win.print("-");
-                unsetColor(pair++);
+                for (ulong k = 0; k < colorNames[(j+1) % colors.length].length; ++k) win.print("-", pair);
+                pair += 1;
                 win.print(" ");
             }
             win.print("\n");

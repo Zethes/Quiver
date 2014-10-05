@@ -45,17 +45,19 @@ class Window
         wmove(_handle, pos.y, pos.x);
     }
 
-    void print(T)(VectorI position, T object, byte color = WHITE_ON_BLACK)
+    void print(T)(VectorI position, T object, ushort color = WHITE_ON_BLACK)
     {
         move(position);
         print(object, color);
     }
 
-    void print(T)(T object, byte color = WHITE_ON_BLACK)
+    void print(T)(T object, ushort color = WHITE_ON_BLACK)
     {
-//        wattron(_handle, COLOR_PAIR(color));
+        if (color >= 0)
+            Colors.setColor(this, color);
         wprintw(_handle, toStringz(format("%s", object)));
-//        wattroff(_handle, COLOR_PAIR(color));
+        if (color >= 0)
+            Colors.unsetColor(this, color);
     }
 
     void print(T : Canvas)(VectorI position, T canvas)
@@ -140,7 +142,7 @@ class Window
         wmove(_handle, cursor.y, cursor.x);
     }
 
-    @property WINDOW* handle() { return handle; }
+    @property WINDOW* handle() { return _handle; }
 
     void draw()
     {
