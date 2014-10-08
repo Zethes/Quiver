@@ -21,10 +21,23 @@ private class ClientListener : Net.ClientListener
     {
         if (event.accepted)
         {
-            _client.dataCore.requestData("timer");
-            _client.dataCore.requestData("client" ~ to!string(event.index) ~ ".canvas");
-            _client.dataCore.requestData("client" ~ to!string(event.index) ~ ".inventory");
             _client._index = event.index;
+            _client._me = _client._clientCore.getClient(_client._index);
+
+            auto request = _client.packetFactory.newDataRequest();
+            request.route(_client._me, Net.Route.server);
+            request.setName("timer");
+            request.send();
+
+            request = _client.packetFactory.newDataRequest();
+            request.route(_client._me, Net.Route.server);
+            request.setName("client" ~ to!string(event.index) ~ ".canvas");
+            request.send();
+
+            request = _client.packetFactory.newDataRequest();
+            request.route(_client._me, Net.Route.server);
+            request.setName("client" ~ to!string(event.index) ~ ".inventory");
+            request.send();
         }
         else
         {
@@ -111,6 +124,16 @@ class QuiverClient : Net.ClientManager
         }
         else
         {
+            static bool first = true;
+            if (_me !is null && first)
+            {
+                auto ping = packetFactory.newActionPing();
+                ping.route(_me, Net.Route.server);
+                ping.data.unique = 5;
+                ping.send();
+                first = false;
+            }
+
             int key;
             while (_screen.getKey(key))
             {
@@ -120,7 +143,13 @@ class QuiverClient : Net.ClientManager
                 }
                 else
                 {
-                    _actionCore.sendKey(key);
+                    if (_me)
+                    {
+                        auto packet = packetFactory.newActionKey();
+                        packet.route(_me, Net.Route.server);
+                        packet.data.key = key;
+                        packet.send();
+                    }
                 }
             }
             _screen.mainWindow.clear();
@@ -155,6 +184,7 @@ private:
     ushort _index;
     Screen _screen;
     Canvas _canvas;
+    Net.Client _me;
 
     Net.GenericData _timerData = null;
     Net.CanvasData _canvasData = null;

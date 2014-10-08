@@ -8,6 +8,7 @@ import network.connection;
 import network.core;
 import network.data.core;
 import network.messaging;
+import network.packetfactory;
 import render.screen;
 import settings;
 import std.algorithm;
@@ -17,103 +18,22 @@ import util.log;
 
 enum ManagerType
 {
-    SERVER = 0,
-    CLIENT = 1
+    Server = 0,
+    Client = 1
 }
-
-class ClientGroup
-{
-
-    @property uint index() const
-    {
-        return _index;
-    }
-
-    @property size_t size() const
-    {
-        return _list.length;
-    }
-
-    ushort[] clientArray()
-    {
-        return _list.dup;
-    }
-
-    void appendClient(ushort client)
-    {
-        if (!assumeSorted(_list).contains(client))
-        {
-            _list ~= client;
-            sort(_list);
-        }
-    }
-
-    void removeClient(ushort index)
-    {
-        for (size_t i = 0; i < _list.length; i++)
-        {
-            if (_list[i] == index)
-            {
-                _list = remove(_list, i);
-                break;
-            }
-        }
-    }
-
-private:
-
-    uint _index;
-
-    this(uint index)
-    {
-        _index = index;
-    }
-
-    ushort[] _list;
-
-}
-
-class GroupController
-{
-
-    this(ManagerBase parent, uint* counter)
-    {
-        _parent = parent;
-        _counter = counter;
-    }
-
-    ClientGroup createGroup()
-    {
-        uint index = (*_counter)++;
-        ClientGroup group = new ClientGroup(index);
-        _parent._groups[index] = group;
-        return group;
-    }
-
-    void clientDied(ushort index)
-    {
-        foreach (value; _parent._groups.values)
-        {
-            value.removeClient(index);
-        }
-    }
-
-private:
-
-    ManagerBase _parent;
-    uint* _counter;
-
-}
-
 
 abstract class ManagerBase
 {
 
     this(ManagerType type)
     {
+        _type = type;
+
         _clientCore = new ClientCore;
-        _dataCore = new DataCore;
+        _dataCore = new DataCore(_clientCore);
         _actionCore = new ActionCore;
+
+        _packetFactory = new PacketFactory(this);
 
         ushort index = 0;
         foreach (core; _cores)
@@ -141,6 +61,23 @@ abstract class ManagerBase
     {
     }
 
+    void shutdown()
+    {
+        foreach (core; _cores)
+        {
+            core.shutdown();
+        }
+
+        foreach (connection; _connections)
+        {
+            if (connection !is null)
+            {
+                connection.shutdown();
+                connection = null;
+            }
+        }
+    }
+
     ushort getConnectionCount()
     {
         return 0;
@@ -166,9 +103,15 @@ abstract class ManagerBase
         return _dataCore;
     }
 
-    @property GroupController groupController()
+    @property ActionCore actionCore()
     {
-        return _groupController;
+        return _actionCore;
+    }
+
+
+    @property PacketFactory packetFactory()
+    {
+        return _packetFactory;
     }
 
     Packet[] receivePackets()
@@ -196,63 +139,209 @@ abstract class ManagerBase
     void routePacket(Packet packet)
     {
         PacketHeader* header = packet.header;
-        assert(packet.from != ushort.max);
+        assert(packet.fromConnection != ushort.max);
 
         // Route to the correct core
         Core toCore;
         assert(header.core < _cores.length, "Core cannot be " ~ to!string(header.core));
         toCore = _cores[header.core];
 
+        // Verify packet before sending
+        assert(verifyPacket(packet));
+
         // Add to inbox
         toCore.packetQueue.inbox ~= packet;
+    }
+
+    bool verifyPacket(ref Packet packet)
+    {
+        bool isServer = _type == ManagerType.Server;
+        bool isClient = _type == ManagerType.Client;
+
+        assert(packet.header.from.type != RouteType.Auto);
+
+        if (isServer)
+        {
+            assert(packet.header.from.type != RouteType.Server);
+        }
+        if (isClient)
+        {
+            assert(packet.header.from.type != RouteType.Connection);
+        }
+
+        if (packet.header.from.type == RouteType.Connection)
+        {
+            packet.header.from.index = packet.fromConnection;
+        }
+
+        foreach (core; _cores)
+        {
+            if (!core.verifyPacket(packet))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool applyRouting(ref Packet packet)
+    {
+        bool isServer = _type == ManagerType.Server;
+        bool isClient = _type == ManagerType.Client;
+
+        assert(packet.header.to.type != RouteType.Auto);
+
+        // Bit of a sanity check, any automatic routing should not have an index
+        if (packet.header.from.type == RouteType.Auto)
+        {
+            assert(packet.header.from.index == ushort.max);
+        }
+
+        if (packet.header.from.type == RouteType.Auto)
+        {
+            if (_type == ManagerType.Server)
+            {
+                packet.header.from.type = RouteType.Server;
+                if (packet.trace) log("|   Resolving automatic routing to server");
+            }
+            else if (_type == ManagerType.Client)
+            {
+                packet.header.from.type = RouteType.Connection;
+                if (packet.trace) log("|   Resolving automatic routing to connection");
+            }
+            else
+            {
+                assert(0);
+            }
+        }
+
+        if (packet.header.to.type == RouteType.Connection)
+        {
+            packet.addConnection(packet.header.to.index);
+            if (packet.trace) log("|   Routing directly to connection: ", packet.header.to.index);
+        }
+
+        if (packet.header.to.type == RouteType.AllConnections)
+        {
+            if (packet.trace) log("|   Routing to all connections");
+            for (ushort i = 0, count = getConnectionCount(); i < count; i++)
+            {
+                Connection connection = getConnection(i);
+                if (connection !is null)
+                {
+                    packet.addConnection(i);
+                }
+            }
+        }
+
+        if (packet.header.to.type == RouteType.AllConnectionsExcept)
+        {
+            if (packet.trace) log("|   Routing to all connections except ", packet.header.to.index);
+            for (ushort i = 0, count = getConnectionCount(); i < count; i++)
+            {
+                Connection connection = getConnection(i);
+                if (connection !is null && i != packet.header.to.index)
+                {
+                    packet.addConnection(i);
+                }
+            }
+        }
+
+        if (packet.header.to.type == RouteType.Server)
+        {
+            if (packet.trace) log("|   Routing to server");
+            packet.addConnection(0);
+        }
+
+        foreach (core; _cores)
+        {
+            if (!core.applyRouting(packet))
+            {
+                return false;
+            }
+        }
+
+        // Sanity checks
+        if (packet.header.from.type == RouteType.Server)
+        {
+            assert(isServer);
+        }
+        if (packet.header.from.type == RouteType.Connection ||
+            packet.header.from.type == RouteType.Client)
+        {
+            assert(isClient);
+        }
+        if (packet.header.to.type == RouteType.Connection ||
+            packet.header.to.type == RouteType.Client)
+        {
+            assert(isServer);
+        }
+        if (packet.header.to.type == RouteType.Server)
+        {
+            assert(isClient);
+        }
+
+        return true;
+    }
+
+    PacketRoute applyRoutingTo(PacketRoute old, ushort connection, ushort duplicate)
+    {
+        PacketRoute route = old;
+        foreach (core; _cores)
+        {
+            core.applyRoutingTo(route, connection, duplicate);
+        }
+        return route;
     }
 
     void sendMessage(Core fromCore, Packet packet)
     {
         PacketHeader* header = packet.header;
 
-        // Client always sends to their one connection (the server)
-        if (fromCore.isClient && packet.to == ushort.max)
+        // Apply routing
+        if (packet.trace) log("| Performing routing...");
+        assert(applyRouting(packet), "Routing failed.");
+
+        // Verify cores send to themselves
+        // This also verifies the core ID's are correct
+        assert(header.core == fromCore.id);
+
+        // Assert that a packet's ID is not invalid
+        assert(header.packet != ushort.max);
+
+        if (packet.trace) log("| About to send, ", packet.allowDuplicate ? "allowing duplicates" : "asserting no duplicates", "...");
+        Connection toConnection;
+        PacketRoute oldTo = packet.header.to;
+        ushort duplicate = 0;
+        ushort last = ushort.max;
+        auto list = packet.connectionList.sort;
+        foreach (i; list)
         {
-            packet.to = 0;
-        }
-
-        // Ensure cores send to themselves
-        header.core = fromCore.id;
-
-        // Get the connection to send to
-        Connection toConnection = getConnection(packet.to);
-
-        // Find group
-        bool doFilter = false;
-        ushort[] filter = null;
-        if (packet.toGroup != uint.max)
-        {
-            ClientGroup* group = packet.toGroup in _groups;
-            if (group)
+            toConnection = getConnection(i);
+            assert(toConnection !is null, packet.header.toString());
+            if (toConnection !is null)
             {
-                doFilter = true;
-                filter = group.clientArray;
-            }
-        }
-
-        if (packet.exclude || packet.to == ushort.max)
-        {
-            for (ushort i = 0; i < getConnectionCount(); i++)
-            {
-                if (!doFilter || assumeSorted(filter).contains(i))
+                if (i == last)
                 {
-                    toConnection = getConnection(i);
-                    if (toConnection && i != packet.to)
-                    {
-                        toConnection.send(packet.rawData);
-                    }
+                    duplicate++;
+                    assert(packet.allowDuplicate || packet.optimizeDuplicates);
+                }
+                else
+                {
+                    duplicate = 0;
+                }
+                last = i;
+                packet.header.to = applyRoutingTo(oldTo, i, duplicate);
+                if (duplicate == 0 || !packet.optimizeDuplicates)
+                {
+                    toConnection.send(packet.rawData);
+                    if (packet.trace) log("| Sent to connection ", i);
+                }
+                else if (duplicate != 0 && packet.trace)
+                {
+                    log("| Optimizing multiple sends to ", i);
                 }
             }
-        }
-        else
-        {
-            toConnection.send(packet.rawData);
         }
     }
 
@@ -274,18 +363,25 @@ abstract class ManagerBase
     void processOutbox()
     {
         // Send messages
-        foreach (core; _cores)
+        foreach (ushort coreID, core; _cores)
         {
             PacketQueue queue = core.packetQueue;
             foreach (Packet packet; queue.outbox)
             {
+                // Ensure cores send to themselves
+                packet.header.core = coreID;
+
+                if (packet.trace) log("Sending Packet ", *(cast(void**)&packet), " (", packet.header.toString(), ")...");
                 sendMessage(core, packet);
+                if (packet.trace) log("Packet ", *(cast(void**)&packet), " sent!");
             }
             queue.outbox.length = 0;
         }
     }
 
 protected:
+
+    ManagerType _type;
 
     union
     {
@@ -297,13 +393,11 @@ protected:
         }
         Core[3] _cores;
     }
-    GroupController _groupController;
 
     Connection[] _connections;
     Connection _listener;
 
-    ClientGroup[uint] _groups;
-    uint _nextGroupIndex;
+    PacketFactory _packetFactory;
 
 }
 
@@ -311,8 +405,8 @@ protected:
 class Manager(ManagerType type) : ManagerBase
 {
 
-    static const bool isServer = type == type.SERVER;
-    static const bool isClient = type == type.CLIENT;
+    static const bool isServer = type == type.Server;
+    static const bool isClient = type == type.Client;
 
     invariant()
     {
@@ -334,7 +428,7 @@ class Manager(ManagerType type) : ManagerBase
         }
     }
 
-    static if (type == ManagerType.CLIENT)
+    static if (type == ManagerType.Client)
     {
 
         void connect(string host, ushort port)
@@ -344,6 +438,7 @@ class Manager(ManagerType type) : ManagerBase
             assert(_connections[0].connect(host, port), "Failed to connect to " ~ host ~ ":" ~ to!string(port));
             log("Connected!");
         }
+
     }
     else
     {
@@ -393,11 +488,8 @@ class Manager(ManagerType type) : ManagerBase
 
     override void initCores(ManagerSettings settings)
     {
-        _groupController = new GroupController(this, &_nextGroupIndex);
-
         foreach (core; _cores)
         {
-            core.setControllers(_groupController);
             core.init(settings);
         }
     }
@@ -472,9 +564,9 @@ class Manager(ManagerType type) : ManagerBase
     override ushort getFreeConnection()
     {
         ushort index = ushort.max;
-        for (ushort i = 0; i < index; i++)
+        for (ushort i = 0; i < _connections.length; i++)
         {
-            if (!_connections[i])
+            if (_connections[i] is null)
             {
                 index = i;
                 break;
@@ -521,7 +613,7 @@ class Manager(ManagerType type) : ManagerBase
                         if (header.length <= con.packetData.length)
                         {
                             Packet newPacket = new Packet(con.packetData[0 .. header.length].dup);
-                            newPacket.from = con.id;
+                            newPacket.fromConnection = con.id;
                             data ~= newPacket;
                             con.packetData = con.packetData[header.length .. $];
                         }
@@ -535,12 +627,6 @@ class Manager(ManagerType type) : ManagerBase
                 {
                     static if (isServer)
                     {
-                        ushort[] clients = clientCore.getClientsByConnection(i);
-                        foreach (client; clients)
-                        {
-                            groupController.clientDied(client);
-                        }
-
                         foreach (core; _cores)
                         {
                             core.connectionDied(i);
@@ -560,5 +646,5 @@ class Manager(ManagerType type) : ManagerBase
 
 }
 
-alias GameManager = Manager!(ManagerType.SERVER);
-alias ClientManager = Manager!(ManagerType.CLIENT);
+alias GameManager = Manager!(ManagerType.Server);
+alias ClientManager = Manager!(ManagerType.Client);

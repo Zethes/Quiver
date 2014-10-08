@@ -1,6 +1,7 @@
 import core.thread;
 import render.screen;
 import settings;
+import tests.network.state;
 import quiver.states.menustate;
 import std.stdio;
 import util.log;
@@ -23,18 +24,19 @@ int main(string[] argv)
     // Setup master try/catch for unhandled exceptions/errors
     try
     {
-        // Setup screens if we're not a dedicated server
-        if (!global.serverOnly)
-        {
-            screen = new Screen;
-        }
-
         // Create finite state machine
         StateMachine fsm;
         fsm = new StateMachine;
 
-        // Enter menu
-        fsm.enterState(new MenuState(fsm, screen));
+        if (global.devToolNetwork)
+        {
+            fsm.enterState(new NetworkTestState);
+        }
+        else
+        {
+            // Enter menu
+            fsm.enterState(new MenuState(fsm, screen));
+        }
 
         // Main game loop
         while (global.running)
@@ -42,6 +44,7 @@ int main(string[] argv)
             fsm.update();
             Thread.sleep(dur!("msecs")(16));
         }
+        fsm.leaveState();
 
         return 0;
     }

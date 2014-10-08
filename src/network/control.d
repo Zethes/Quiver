@@ -62,6 +62,14 @@ class Control
         return true;
     }
 
+    void shutdown()
+    {
+        foreach (manager; _managers)
+        {
+            manager.shutdown();
+        }
+    }
+
 private:
 
     ManagerBase[] _managers;

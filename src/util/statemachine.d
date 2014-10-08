@@ -39,6 +39,15 @@ class StateMachine
         }
     }
 
+    void leaveState()
+    {
+        if (_state)
+        {
+            _state.exit();
+            _state = null;
+        }
+    }
+
 private:
 
     State _state;

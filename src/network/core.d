@@ -13,12 +13,11 @@ abstract class Core
         _packetQueue = new PacketQueue;
     }
 
-    void setControllers(GroupController groupController)
+    void init(ManagerSettings settings)
     {
-        _groupController = groupController;
     }
 
-    void init(ManagerSettings settings)
+    void shutdown()
     {
     }
 
@@ -40,22 +39,17 @@ abstract class Core
 
     @property bool isServer() const
     {
-        return _managerType == ManagerType.SERVER;
+        return _managerType == ManagerType.Server;
     }
 
     @property bool isClient() const
     {
-        return _managerType == ManagerType.CLIENT;
+        return _managerType == ManagerType.Client;
     }
 
     @property ushort id() const
     {
         return _id;
-    }
-
-    @property GroupController groupController()
-    {
-        return _groupController;
     }
 
     void connectionDied(ushort index)
@@ -79,6 +73,20 @@ abstract class Core
     {
     }
 
+    bool verifyPacket(ref Packet packet)
+    {
+        return true;
+    }
+
+    bool applyRouting(ref Packet packet)
+    {
+        return true;
+    }
+
+    void applyRoutingTo(ref PacketRoute route, ushort connection, ushort duplicate)
+    {
+    }
+
     void update()
     {
     }
@@ -89,8 +97,6 @@ private:
 
     ManagerType _managerType;
     ushort _id;
-
-    GroupController _groupController;
 
 }
 

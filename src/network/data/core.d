@@ -1,12 +1,12 @@
 module network.data.core;
 
+import network.client.core;
 import network.client.listener;
 import network.control;
 import network.core;
 import network.data.canvas;
 import network.data.generic;
 import network.data.listener;
-import network.manager : ClientGroup;
 import network.messaging;
 import settings;
 import std.conv;
@@ -165,17 +165,57 @@ private:
 class DataCore : Core
 {
 
+    this(ClientCore clientCore)
+    {
+        _clientCore = clientCore;
+    }
+
     override void init(ManagerSettings settings)
     {
         if (isClient)
         {
-            auto packet = new PacketInit;
-            packetQueue.queue(packet);
+            auto packet = newInit();
+            packet.route(Route.connection, Route.server);
+            packet.send();
         }
         else
         {
             _ready = true;
         }
+    }
+
+    private auto newInit()
+    {
+        return new PacketInit(this, PACKET_INIT);
+    }
+
+    private auto newInitResponse()
+    {
+        return new PacketInitResponse(this, PACKET_INIT_RESPONSE);
+    }
+
+    auto newDataRequest()
+    {
+        return new PacketRequest(this, PACKET_REQUEST);
+    }
+
+    auto newDataRequestResponse()
+    {
+        return new PacketRequestResponse(this, PACKET_REQUEST_RESPONSE);
+    }
+
+    auto newDataUpdate()
+    {
+        auto pkt = new PacketDataUpdate(this, PACKET_DATA_UPDATE);
+        pkt.optimizeDuplicates = true;
+        return pkt;
+    }
+
+    auto newDataProperty()
+    {
+        auto pkt = new PacketDataProperty(this, PACKET_DATA_PROPERTY);
+        pkt.optimizeDuplicates = true;
+        return pkt;
     }
 
     ClientListener createClientListener()
@@ -186,7 +226,7 @@ class DataCore : Core
     void registerData(string name, Data data)
     {
         assert(isServer);
-        log("Registering data: \"", name, "\"");
+        log("Registering data: \"", name, "\" (id: ", _nextData, ")");
 
         data._client = false;
 
@@ -194,7 +234,7 @@ class DataCore : Core
         uint index = _nextData++;
         _dataNames[name] = index;
         _dataMap[index] = data;
-        data._clients = groupController.createGroup();
+        data._clients = _clientCore.createGroup();
     }
 
     void freeData(string name)
@@ -205,16 +245,6 @@ class DataCore : Core
         log("Freeing data: \"", name, "\"");
         _dataMap.remove(_dataNames[name]);
         _dataNames.remove(name);
-    }
-
-    void requestData(string name)
-    {
-        PacketRequest packet = new PacketRequest;
-        assert(name.length <= packet.data.name.length);
-
-        packet.data.nameLength = to!ubyte(name.length);
-        packet.data.name[0 .. name.length] = name.dup;
-        packetQueue.queue(packet);
     }
 
     override @property bool ready()
@@ -259,8 +289,9 @@ class DataCore : Core
     {
         assert(isServer);
 
-        auto response = new PacketInitResponse(packet.from);
-        packetQueue.queue(response);
+        auto response = newInitResponse();
+        response.respond(packet);
+        response.send();
     }
 
     void processPacket(Packet packet, PacketInitResponse.Data data)
@@ -274,8 +305,10 @@ class DataCore : Core
     {
         assert(isServer);
         assert(data.nameLength <= data.name.length);
+        assert(data.header.from.type == RouteType.Client);
 
-        auto response = new PacketRequestResponse(packet.from);
+        auto response = newDataRequestResponse();
+        response.respond(packet);
 
         char[] name = data.name[0 .. data.nameLength];
         response.data.nameLength = data.nameLength;
@@ -287,60 +320,69 @@ class DataCore : Core
             response.data.accepted = true;
             response.data.index = *dataIndex;
             response.data.type = dataObject.type;
-            dataObject._clients.appendClient(packet.from);
-            packetQueue.queue(response);
+            dataObject._clients.appendClient(data.header.from.index);
+            response.send();
 
             foreach (key, value; dataObject._properties)
             {
-                auto packet = new PacketDataProperty(packet.from, false);
-                packet.data.index = *dataIndex;
-                packet.data.property = key;
-                packet.data.value = value;
-                packetQueue.queue(packet);
+                auto property = newDataProperty();
+                property.respond(packet);
+                property.data.index = *dataIndex;
+                property.data.property = key;
+                property.data.value = value;
+                property.send();
             }
 
-            auto dataPacket = new PacketDataUpdate(dataObject._clients.index);
+            auto dataPacket = newDataUpdate();
+            dataPacket.respond(packet);
             dataPacket.data.index = *dataIndex;
             ubyte[] raw = dataObject.getRaw();
             assert(raw !is null);
             assert(raw.length <= ushort.max);
             dataPacket.data.dataLength = cast(ushort)raw.length;
-            packetQueue.queue(dataPacket, raw);
+            dataPacket.send(raw);
         }
         else
         {
             response.data.accepted = false;
             response.data.index = uint.max;
-            packetQueue.queue(response);
+            response.send();
         }
     }
 
     void processPacket(Packet packet, PacketRequestResponse.Data data)
     {
         assert(isClient);
+        assert(data.header.to.type == RouteType.Client);
 
         string name = data.name[0 .. data.nameLength].dup;
 
-        Data newData;
         if (data.accepted)
         {
-            switch (data.type)
+            uint* lookup = name in _dataNames;
+            if (lookup is null)
             {
-                case DataType.GENERIC:
-                    newData = new GenericData;
-                    break;
-                case DataType.CANVAS:
-                    newData = new CanvasData;
-                    break;
-                default:
-                    assert(0);
+                Data newData;
+                switch (data.type)
+                {
+                    case DataType.GENERIC:
+                        newData = new GenericData;
+                        break;
+                    case DataType.CANVAS:
+                        newData = new CanvasData;
+                        break;
+                    default:
+                        assert(0);
+                }
+
+                newData._client = true;
+                _dataNames[name] = data.index;
+                _dataMap[data.index] = newData;
             }
-            newData._client = true;
-            _dataNames[name] = data.index;
-            _dataMap[data.index] = newData;
         }
 
         DataResponseEvent event;
+        event.client = data.header.to.index;
         event.name = cast(string)name;
         event.accepted = data.accepted;
         event.index = data.index;
@@ -353,7 +395,7 @@ class DataCore : Core
         assert(packet.header.length == PacketDataUpdate.Data.sizeof + data.dataLength);
 
         Data* dataObject = data.index in _dataMap;
-        assert(dataObject !is null);
+        assert(dataObject !is null, "Trying to update nonexistent data object (" ~ to!string(data.index) ~ ").");
         dataObject.processProperties();
         dataObject.updateData(leftover);
     }
@@ -380,11 +422,12 @@ class DataCore : Core
             {
                 foreach (property; dataObject._dirtyProperties)
                 {
-                    auto packet = new PacketDataProperty(dataObject._clients.index, true);
+                    auto packet = newDataProperty();
+                    packet.route(Route.server, dataObject._clients);
                     packet.data.index = key;
                     packet.data.property = property;
                     packet.data.value = dataObject.getProperty(property);
-                    packetQueue.queue(packet);
+                    packet.send();
                 }
 
                 dataObject._dirtyProperties.length = 0;
@@ -394,11 +437,12 @@ class DataCore : Core
                 ubyte[] data = dataObject.getUpdateData();
                 if (data !is null)
                 {
-                    auto packet = new PacketDataUpdate(dataObject._clients.index);
+                    auto packet = newDataUpdate();
+                    packet.route(Route.server, dataObject._clients);
                     packet.data.index = key;
                     assert(data.length <= ushort.max);
                     packet.data.dataLength = cast(ushort)data.length;
-                    packetQueue.queue(packet, data);
+                    packet.send(data);
                 }
             }
         }
@@ -408,11 +452,12 @@ class DataCore : Core
             {
                 foreach (property; dataObject._dirtyProperties)
                 {
-                    auto packet = new PacketDataProperty(0, false);
+                    auto packet = newDataProperty();
+                    packet.route(Route.connection, Route.server);
                     packet.data.index = key;
                     packet.data.property = property;
                     packet.data.value = dataObject._queueProperties[property];
-                    packetQueue.queue(packet);
+                    packet.send();
                 }
 
                 dataObject._dirtyProperties.length = 0;
@@ -454,6 +499,7 @@ private:
 
     ListenManager!DataListener _listen;
 
+    ClientCore _clientCore;
     DataClientListener _clientListener;
 
 }
@@ -484,19 +530,7 @@ struct PacketInitData
     }
 
 }
-
-class PacketInit : PacketDefinition!PacketInitData
-{
-
-    this()
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_INIT;
-    }
-
-}
+alias PacketInit = PacketDefinition!PacketInitData;
 
 struct PacketInitResponseData
 {
@@ -514,20 +548,7 @@ struct PacketInitResponseData
     }
 
 }
-
-class PacketInitResponse : PacketDefinition!PacketInitResponseData
-{
-
-    this(ushort to)
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_INIT_RESPONSE;
-        _to = to;
-    }
-
-}
+alias PacketInitResponse = PacketDefinition!PacketInitResponseData;
 
 struct PacketRequestData
 {
@@ -551,14 +572,13 @@ struct PacketRequestData
 class PacketRequest : PacketDefinition!PacketRequestData
 {
 
-    this()
+    mixin(constructor);
+
+    void setName(string name)
     {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_REQUEST;
+        data.nameLength = to!ubyte(name.length);
+        data.name[0 .. name.length] = name.dup;
     }
-
 }
 
 struct PacketRequestResponseData
@@ -582,20 +602,7 @@ struct PacketRequestResponseData
     }
 
 }
-
-class PacketRequestResponse : PacketDefinition!PacketRequestResponseData
-{
-
-    this(ushort to)
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_REQUEST_RESPONSE;
-        _to = to;
-    }
-
-}
+alias PacketRequestResponse = PacketDefinition!PacketRequestResponseData;
 
 struct PacketDataUpdateData
 {
@@ -615,20 +622,7 @@ struct PacketDataUpdateData
     }
 
 }
-
-class PacketDataUpdate : PacketDefinition!PacketDataUpdateData
-{
-
-    this(uint to)
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_DATA_UPDATE;
-        _toGroup = to;
-    }
-
-}
+alias PacketDataUpdate = PacketDefinition!PacketDataUpdateData;
 
 struct PacketDataPropertyData
 {
@@ -649,24 +643,4 @@ struct PacketDataPropertyData
     }
 
 }
-
-class PacketDataProperty : PacketDefinition!PacketDataPropertyData
-{
-
-    this(uint to, bool group)
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_DATA_PROPERTY;
-        if (group)
-        {
-            _toGroup = to;
-        }
-        else
-        {
-            _to = .to!ushort(to);
-        }
-    }
-
-}
+alias PacketDataProperty = PacketDefinition!PacketDataPropertyData;

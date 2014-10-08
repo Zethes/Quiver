@@ -1,7 +1,52 @@
 module network.messaging;
 
+import network.core;
 import std.conv;
 import util.log;
+
+enum RouteType
+{
+    Auto,
+    Connection,
+    AllConnections,
+    AllConnectionsExcept,
+    Server,
+    Client,
+    AllClients,
+    AllClientsExcept,
+    ClientGroup
+}
+
+class Route
+{
+
+    static PacketRoute automatic = PacketRoute(RouteType.Auto);
+    static PacketRoute connection = PacketRoute(RouteType.Connection);
+    static PacketRoute allConnections = PacketRoute(RouteType.AllConnections);
+    static PacketRoute server = PacketRoute(RouteType.Server);
+    static PacketRoute allClients = PacketRoute(RouteType.AllClients);
+
+    static PacketRoute allConnectionsExcept(ushort index)
+    {
+        return PacketRoute(RouteType.AllConnectionsExcept, index);
+    }
+
+    static PacketRoute client(ushort index)
+    {
+        return PacketRoute(RouteType.Client, index);
+    }
+
+    static PacketRoute allClientsExcept(ushort index)
+    {
+        return PacketRoute(RouteType.AllClientsExcept, index);
+    }
+
+    static PacketRoute clientGroup(ushort index)
+    {
+        return PacketRoute(RouteType.ClientGroup, index);
+    }
+
+}
 
 class Packet
 {
@@ -50,44 +95,24 @@ class Packet
         return _data;
     }
 
-    @property ushort from() const
+    @property ushort fromConnection() const
     {
-        return _from;
+        return _fromConnection;
     }
 
-    @property void from(ushort value)
+    @property void fromConnection(ushort value)
     {
-        _from = value;
+        _fromConnection = value;
     }
 
-    @property ushort to() const
+    void addConnection(ushort connection)
     {
-        return _to;
+        _connectionList ~= connection;
     }
 
-    @property void to(ushort value)
+    @property ushort[] connectionList()
     {
-        _to = value;
-    }
-
-    @property bool exclude() const
-    {
-        return _exclude;
-    }
-
-    @property void exclude(bool value)
-    {
-        _exclude = value;
-    }
-
-    @property uint toGroup() const
-    {
-        return _toGroup;
-    }
-
-    @property void toGroup(uint value)
-    {
-        _toGroup = value;
+        return _connectionList;
     }
 
     ubyte[] getExtra(size_t start)
@@ -102,12 +127,44 @@ class Packet
         return Packet.getExtra(T.sizeof);
     }
 
+    @property bool routed() const // TODO: remove this
+    {
+        return false;
+    }
+
+    @property bool allowDuplicate() const
+    {
+        return false;
+    }
+
+    @property void allowDuplicate(bool value)
+    {
+    }
+
+    @property bool optimizeDuplicates() const
+    {
+        return false;
+    }
+
+    @property void optimizeDuplicates(bool value)
+    {
+    }
+
+    @property bool trace() const
+    {
+        return false;
+    }
+
+    @property void trace(bool value)
+    {
+    }
+
 protected:
 
-    ushort _from = ushort.max;
-    ushort _to = ushort.max;
+    ushort _fromConnection = ushort.max;
+    ushort _toConnection = ushort.max;
+    ushort[] _connectionList = null;
     bool _exclude = false;
-    uint _toGroup = uint.max;
     ubyte[] _data;
 
 }
@@ -115,16 +172,153 @@ protected:
 class PacketDefinition(T) : Packet
 {
 
-    this(size_t dataLength)
-    {
-        super(dataLength);
-    }
+    static const string constructor = "this(Core core, ushort packet = ushort.max){super(core, packet);}";
 
     alias Data = T;
+
+    this(Core core, ushort packet = ushort.max)
+    {
+        super(Data.sizeof);
+        *(cast(Data*)_data) = Data.init;
+        _core = core;
+        header.packet = packet;
+    }
 
     @property ref Data data()
     {
         return *(cast(Data*)_data);
+    }
+
+    void route(T1, T2)(T1 from, T2 to)
+    {
+        header.from = .to!PacketRoute(from);
+        header.to = .to!PacketRoute(to);
+        _routedFrom = true;
+        _routedTo = true;
+    }
+
+    void respond(Packet other)
+    {
+        header.from = other.header.to;
+        header.to = other.header.from;
+        _routedFrom = true;
+        _routedTo = true;
+    }
+
+    void routeFrom(T1)(T1 from)
+    {
+        header.from = .to!PacketRoute(from);
+        _routedFrom = true;
+    }
+
+    void routeFrom(T1 : Packet)(T1 other)
+    {
+        header.from = other.header.to;
+        _routedFrom = true;
+    }
+
+    void routeTo(T1)(T1 to)
+    {
+        header.from = .to!PacketRoute(from);
+        header.to = .to!PacketRoute(to);
+        _routedFrom = true;
+        _routedTo = true;
+    }
+
+    void routeTo(T1 : Packet)(T1 other)
+    {
+        header.to = other.header.from;
+        _routedTo = true;
+    }
+
+    void send()
+    {
+        assert(_core !is null);
+        assert(routed, "The packet was not routed.");
+        assert(!_sent, "Packet already sent.");
+        verify();
+
+        _sent = true;
+        _core.packetQueue.queue(this);
+    }
+
+    void send(ubyte[] extra)
+    {
+        assert(_core !is null);
+        assert(routed, "The packet was not routed.");
+        assert(!_sent, "Packet already sent.");
+        verify();
+
+        _sent = true;
+        _core.packetQueue.queue(this, extra);
+    }
+
+    void verify()
+    {
+    }
+
+    override @property bool routed() const // TODO: remove this
+    {
+        return _routedFrom && _routedTo;
+    }
+
+    override @property bool allowDuplicate() const
+    {
+        return _allowDuplicate;
+    }
+
+    override @property void allowDuplicate(bool value)
+    {
+        _allowDuplicate = value;
+    }
+
+    override @property bool optimizeDuplicates() const
+    {
+        return _optimizeDuplicates;
+    }
+
+    override @property void optimizeDuplicates(bool value)
+    {
+        _optimizeDuplicates = value;
+    }
+
+    override @property bool trace() const
+    {
+        return _trace;
+    }
+
+    override @property void trace(bool value)
+    {
+        _trace = value;
+    }
+
+private:
+
+    Core _core;
+    bool _routedFrom = false;
+    bool _routedTo = false;
+    bool _sent = false;
+    bool _allowDuplicate = false;
+    bool _optimizeDuplicates = false;
+    bool _trace = false;
+
+}
+
+struct PacketRoute
+{
+
+    RouteType type = RouteType.Auto;
+    ushort index = ushort.max;
+
+    this(RouteType route)
+    {
+        type = route;
+    }
+
+    this(RouteType route, ushort index)
+    {
+        this.type = route;
+        this.index = index;
     }
 
 }
@@ -139,6 +333,9 @@ struct PacketHeader
     ushort packet = ushort.max;
     ushort length = ushort.max;
 
+    PacketRoute to;
+    PacketRoute from;
+
     void swap()
     {
         // TODO: endian swapping
@@ -147,10 +344,10 @@ struct PacketHeader
     string toString() const
     {
         string result;
-        result ~= "Magic  : " ~ magic1 ~ magic2 ~ magic3 ~ magic4 ~ "\n";
-        result ~= "Core   : " ~ .to!string(core) ~ "\n";
-        result ~= "Packet : " ~ .to!string(packet) ~ "\n";
-        result ~= "Length : " ~ .to!string(length) ~ "\n";
+        result ~= "PacketHeader(Magic: " ~ magic1 ~ magic2 ~ magic3 ~ magic4 ~ ", ";
+        result ~= "Core: " ~ .to!string(core) ~ ", ";
+        result ~= "Packet: " ~ .to!string(packet) ~ ", ";
+        result ~= "Length: " ~ .to!string(length) ~ ")";
         return result;
     }
 }
@@ -161,6 +358,8 @@ class PacketQueue
     void queue(T)(T packet)
         if (is(typeof(packet.header) == PacketHeader*) && is(typeof(packet.data.header) == PacketHeader))
     {
+        assert(packet._sent, "Calling queue directly is deprecated, please use Packet.send().");
+
         // TODO: endian swapping
         if (false)
         {
@@ -174,6 +373,8 @@ class PacketQueue
     void queue(T)(T packet, ubyte[] extra)
         if (is(typeof(packet.header) == PacketHeader*) && is(typeof(packet.data.header) == PacketHeader))
     {
+        assert(packet._sent, "Calling queue directly is deprecated, please use Packet.send(extra).");
+
         // TODO: endian swapping
         if (false)
         {

@@ -8,10 +8,14 @@ import util.statemachine;
 class MenuState : State
 {
 
-    this(StateMachine fsm, Screen screen)
+    this(StateMachine fsm, ref Screen screen)
     {
         _fsm = fsm;
-        _screen = screen;
+        if (!global.serverOnly)
+        {
+            screen = new Screen;
+            _screen = screen;
+        }
     }
 
     ~this()
@@ -42,8 +46,8 @@ class MenuState : State
             else if (key == 'c')
             {
                 GameSettings settings;
-                settings.host = "127.0.0.1";
-                settings.port = 1333;
+                settings.host = "72.181.193.50";
+                settings.port = 8080;
                 settings.client = true;
                 _fsm.enterState(new GameState(_fsm, _screen, settings));
             }

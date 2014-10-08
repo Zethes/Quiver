@@ -1,6 +1,7 @@
 module network.data.generic;
 
 import network.data.core;
+import std.conv;
 import util.log;
 
 class GenericData : Data
@@ -60,6 +61,17 @@ class GenericData : Data
             data.x = value;
             dirty = true;
         }
+    }
+
+    @property uint length() const
+    {
+        return getProperty(0);
+    }
+
+    @property void length(uint value)
+    {
+        assert(value < int.max, "Length cannot be " ~ to!string(value));
+        setProperty(0, value);
     }
 
 private:

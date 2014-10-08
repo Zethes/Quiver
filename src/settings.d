@@ -11,6 +11,8 @@ struct Settings
     bool serverOnly = false;
     bool clientOnly = false;
 
+    bool devToolNetwork = false;
+
     void parseCommandLine(string[] argv)
     {
         for (size_t i = 1; i < argv.length; i++)
@@ -22,6 +24,11 @@ struct Settings
             else if (argv[i] == "-client")
             {
                 clientOnly = true;
+            }
+            else if (argv[i] == "-test_network")
+            {
+                devToolNetwork = true;
+                serverOnly = true; //hack
             }
             else if (argv[i] == "--help" || argv[i] == "-h")
             {

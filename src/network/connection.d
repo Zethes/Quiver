@@ -115,13 +115,24 @@ class Connection
         {
             Socket newSocket = _socket.accept();
             newSocket.blocking = false;
-            log("Got client! ", index);
             return new Connection(newSocket, index);
         }
         catch
         {
             return null;
         }
+    }
+
+    void shutdown()
+    {
+        if (_connected && _socket !is null)
+        {
+            _socket.shutdown(SocketShutdown.BOTH);
+            _socket.close();
+            _socket = null;
+        }
+        _local = false;
+        _connected = false;
     }
 
     @property ref ubyte[] packetData()
@@ -151,7 +162,7 @@ private:
 
     bool _local;
     Connection _other;
-    Socket _socket;
+    Socket _socket = null;
     ushort _id;
     ubyte[] _packetData;
     bool _connected;

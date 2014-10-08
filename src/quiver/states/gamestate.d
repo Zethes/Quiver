@@ -75,6 +75,10 @@ class GameState : State
 
     void exit()
     {
+        if (_netControl)
+        {
+            _netControl.shutdown();
+        }
     }
 
 private:

@@ -4,14 +4,17 @@ import network.client.listener;
 import network.core;
 import network.messaging;
 import settings;
+import std.algorithm;
 import std.conv;
+import std.range;
 import util.log;
 
 class Client
 {
-    this(char[] name, ushort connection = ushort.max)
+    this(char[] name, ushort index, ushort connection = ushort.max)
     {
         _name = new char[name.length];
+        _index = index;
         for (int i = 0; i < name.length; i++)
         {
             _name[i] = name[i];
@@ -24,15 +27,88 @@ class Client
         return _name;
     }
 
+    @property ushort index() const
+    {
+        return _index;
+    }
+
     @property ushort connection() const
     {
         return _connection;
     }
 
+    auto opCast(PacketRoute)()
+    {
+        return PacketRoute(RouteType.Client, _index);
+    }
+
 private:
 
     char[] _name;
+    ushort _index;
     ushort _connection;
+
+}
+
+class ClientGroup
+{
+
+    @property ushort index() const
+    {
+        return _index;
+    }
+
+    @property size_t size() const
+    {
+        return _list.length;
+    }
+
+    ushort[] clientArray()
+    {
+        return _list.dup;
+    }
+
+    void appendClient(ushort client)
+    {
+        if (!assumeSorted(_list).contains(client))
+        {
+            _list ~= client;
+            _list = _list.sort;
+        }
+    }
+
+    void removeClient(ushort index)
+    {
+        for (size_t i = 0; i < _list.length; i++)
+        {
+            if (_list[i] == index)
+            {
+                _list = remove(_list, i);
+                break;
+            }
+        }
+    }
+
+    bool hasClient(ushort client)
+    {
+        return assumeSorted(_list).contains(client);
+    }
+
+    auto opCast(PacketRoute)() const
+    {
+        return PacketRoute(RouteType.ClientGroup, _index);
+    }
+
+private:
+
+    ushort _index;
+
+    this(ushort index)
+    {
+        _index = index;
+    }
+
+    ushort[] _list;
 
 }
 
@@ -43,8 +119,9 @@ class ClientCore : Core
     {
         if (isClient)
         {
-            auto packet = new PacketInit;
-            packetQueue.queue(packet);
+            auto packet = newInit();
+            packet.route(Route.connection, Route.server);
+            packet.send();
         }
         else
         {
@@ -53,21 +130,52 @@ class ClientCore : Core
         }
     }
 
+    private auto newInit()
+    {
+        return new PacketInit(this, PACKET_INIT);
+    }
+
+    private auto newInitResponse()
+    {
+        return new PacketInitResponse(this, PACKET_INIT_RESPONSE);
+    }
+
+    auto newClientRegister()
+    {
+        return new PacketRegister(this, PACKET_REGISTER);
+    }
+
+    auto newClientRegisterResponse()
+    {
+        return new PacketRegisterResponse(this, PACKET_REGISTER_RESPONSE);
+    }
+
+    auto newClientJoin()
+    {
+        return new PacketClientJoin(this, PACKET_CLIENT_JOIN);
+    }
+
+    auto newClientLeft()
+    {
+        return new PacketClientLeft(this, PACKET_CLIENT_LEFT);
+    }
+
     override @property bool ready()
     {
         return _ready;
     }
 
-    void registerClient(string name)
+    void registerClient(string name) // TODO: deprecate this
     {
         assert(isClient);
 
-        auto packet = new PacketRegister;
+        auto packet = newClientRegister();
         assert(name.length <= packet.data.name.length);
 
+        packet.route(Route.connection, Route.server);
         packet.data.nameLength = cast(ubyte)name.length;
         packet.data.name[0 .. name.length] = name;
-        packetQueue.queue(packet);
+        packet.send();
     }
 
     @property ushort maxClients() const
@@ -103,15 +211,30 @@ class ClientCore : Core
     {
         assert(isServer);
 
-        for (ushort i = 0; i < _clients.length; i++)
+        ushort[] deadClients = getClientsByConnection(index);
+        foreach (client; deadClients)
         {
-            if (_clients[i])
+            clientDied(client);
+        }
+    }
+
+    void clientDied(ushort index)
+    {
+        foreach (value; _groups.values)
+        {
+            value.removeClient(index);
+        }
+
+        foreach (ushort i, client; _clients)
+        {
+            if (client !is null)
             {
                 if (_clients[i].connection == index)
                 {
-                    auto left = new PacketClientLeft;
+                    auto left = newClientLeft();
+                    left.route(Route.server, Route.allConnectionsExcept(index));
                     left.data.index = index;
-                    packetQueue.queue(left);
+                    left.send();
 
                     ClientLeftEvent event;
                     event.index = index;
@@ -178,20 +301,22 @@ class ClientCore : Core
     {
         assert(isServer);
 
-        auto response = new PacketInitResponse(packet.from);
+        auto response = newInitResponse();
+        response.respond(packet);
         response.data.maxClients = maxClients;
-        packetQueue.queue(response);
+        response.send();
 
         for (ushort i = 0; i < _clients.length; i++)
         {
             if (_clients[i])
             {
-                auto join = new PacketClientJoin(packet.from);
+                auto join = newClientJoin();
+                join.respond(packet);
                 join.data.index = i;
                 join.data.nameLength = cast(ubyte)_clients[i].name.length;
                 join.data.name[0 .. _clients[i].name.length] = _clients[i].name;
                 join.data.existing = true;
-                packetQueue.queue(join);
+                join.send();
             }
         }
     }
@@ -209,7 +334,8 @@ class ClientCore : Core
     {
         assert(isServer);
 
-        auto response = new PacketRegisterResponse(packet.from);
+        auto response = newClientRegisterResponse();
+        response.respond(packet);
 
         ushort index = getNextSlot();
         char[] acceptedName;
@@ -220,7 +346,7 @@ class ClientCore : Core
             acceptedName ~= to!string(index + 1);
 
             response.data.accepted = true;
-            _clients[index] = new Client(acceptedName, packet.from);
+            _clients[index] = new Client(acceptedName, index, packet.fromConnection);
             response.data.nameLength = cast(ubyte)acceptedName.length;
             response.data.name[0 .. acceptedName.length] = acceptedName;
         }
@@ -230,18 +356,18 @@ class ClientCore : Core
         }
 
         response.data.index = index;
-        packetQueue.queue(response);
+        response.send();
 
         // tell everyone else about this
         if (index != ushort.max)
         {
-            auto join = new PacketClientJoin(packet.from);
-            join._exclude = true;
+            auto join = newClientJoin();
+            join.route(Route.server, Route.allConnectionsExcept(packet.fromConnection));
             join.data.index = index;
             join.data.nameLength = cast(ubyte)acceptedName.length;
             join.data.name[0 .. acceptedName.length] = acceptedName[0 .. acceptedName.length];
             join.data.existing = false;
-            packetQueue.queue(join);
+            join.send();
 
             ClientJoinEvent event;
             event.index = index;
@@ -256,7 +382,7 @@ class ClientCore : Core
 
         if (data.accepted)
         {
-            _clients[data.index] = new Client(data.name[0 .. data.nameLength]);
+            _clients[data.index] = new Client(data.name[0 .. data.nameLength], data.index);
         }
 
         ClientRegisteredEvent event;
@@ -267,7 +393,7 @@ class ClientCore : Core
 
     void processPacket(Packet packet, PacketClientJoin.Data data)
     {
-        _clients[data.index] = new Client(data.name[0 .. data.nameLength]);
+        _clients[data.index] = new Client(data.name[0 .. data.nameLength], data.index);
 
         ClientJoinEvent event;
         event.index = data.index;
@@ -282,6 +408,123 @@ class ClientCore : Core
         _listen.fire!"onClientLeft"(event);
 
         _clients[data.index] = null;
+    }
+
+    override bool verifyPacket(ref Packet packet)
+    {
+        assert(packet.header.from.type != RouteType.AllClients);
+        assert(packet.header.from.type != RouteType.AllClientsExcept);
+        assert(packet.header.from.type != RouteType.ClientGroup);
+
+        if (packet.header.from.type == RouteType.Client)
+        {
+            Client client = getClient(packet.header.from.index);
+            if (client !is null)
+            {
+                // Verify that the connection sending this owns the client they claim to control
+                if (client.connection != packet.fromConnection)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    override bool applyRouting(ref Packet packet)
+    {
+        if (isServer)
+        {
+            if (packet.header.to.type == RouteType.Client)
+            {
+                if (packet.trace) log("|   Routing directly to client: ", packet.header.to.index);
+                Client client = getClient(packet.header.to.index);
+                assert(client !is null);
+                packet.addConnection(client.connection);
+                if (packet.trace) log("|     Client: ", packet.header.to.index, ", Connection: ", client.connection);
+            }
+
+            if (packet.header.to.type == RouteType.AllClients)
+            {
+                if (packet.trace) log("|   Routing to all clients...");
+                assert(packet.header.to.index == ushort.max);
+                foreach (client; _clients)
+                {
+                    if (client !is null)
+                    {
+                        packet.addConnection(client.connection);
+                        if (packet.trace) log("|     Client: ", client.index, ", Connection: ", client.connection);
+                    }
+                }
+            }
+
+            if (packet.header.to.type == RouteType.AllClientsExcept)
+            {
+                if (packet.trace) log("|   Routing to all clients except", packet.header.to.index, "...");
+                assert(packet.header.to.index != ushort.max);
+                foreach (client; _clients)
+                {
+                    if (client !is null && client.index != packet.header.to.index)
+                    {
+                        packet.addConnection(client.connection);
+                        if (packet.trace) log("|     Client: ", client.index, ", Connection: ", client.connection);
+                    }
+                }
+            }
+
+            if (packet.header.to.type == RouteType.ClientGroup)
+            {
+                if (packet.trace) log("|   Routing to all client group ", packet.header.to.index, "...");
+                assert(packet.header.to.index != ushort.max);
+                ClientGroup* group = packet.header.to.index in _groups;
+                assert(group !is null);
+                foreach (client; group.clientArray)
+                {
+                    Client clientObj = getClient(client);
+                    assert(clientObj !is null);
+                    packet.addConnection(clientObj.connection);
+                    if (packet.trace) log("|     Client: ", client, ", Connection: ", clientObj.connection);
+                }
+            }
+        }
+        else
+        {
+            // A client cannot send to another client, must go through server
+            assert(packet.header.to.type != RouteType.Client);
+            assert(packet.header.to.type != RouteType.AllClients);
+            assert(packet.header.to.type != RouteType.AllClientsExcept);
+            assert(packet.header.to.type != RouteType.ClientGroup);
+        }
+        return true;
+    }
+
+    override void applyRoutingTo(ref PacketRoute route, ushort connection, ushort duplicate)
+    {
+        if (route.type == RouteType.ClientGroup)
+        {
+            // Get clients from the connection
+            ushort[] clients = getClientsByConnection(connection);
+
+            // Get the client group
+            ClientGroup group = _groups[route.index];
+            assert(group !is null);
+
+            // Determine which of these connections are in the client group
+            ushort[] candidates = null;
+            foreach (client; clients)
+            {
+                if (group.hasClient(client))
+                {
+                    candidates ~= client;
+                }
+            }
+
+            route = PacketRoute(RouteType.Client, candidates[duplicate]);
+        }
     }
 
     @property string connectedClients()
@@ -312,12 +555,31 @@ class ClientCore : Core
         _listen.removeListener(listener);
     }
 
+    ClientGroup createGroup()
+    {
+        ushort index = _nextGroupIndex++;
+        ClientGroup group = new ClientGroup(index);
+        _groups[index] = group;
+        return group;
+    }
+
+    void removeGroupClient(ushort index)
+    {
+        foreach (value; _groups.values)
+        {
+            value.removeClient(index);
+        }
+    }
+
 private:
 
     bool _ready = false;
     Client[] _clients;
 
     ListenManager!ClientListener _listen;
+
+    ClientGroup[ushort] _groups;
+    ushort _nextGroupIndex;
 
 }
 
@@ -346,19 +608,7 @@ struct PacketInitData
         // TODO: endian swapping
     }
 }
-
-class PacketInit : PacketDefinition!PacketInitData
-{
-
-    this()
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_INIT;
-    }
-
-}
+alias PacketInit = PacketDefinition!PacketInitData;
 
 struct PacketInitResponseData
 {
@@ -377,20 +627,7 @@ struct PacketInitResponseData
     }
 
 }
-
-class PacketInitResponse : PacketDefinition!PacketInitResponseData
-{
-
-    this(ushort to)
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_INIT_RESPONSE;
-        _to = to;
-    }
-
-}
+alias PacketInitResponse = PacketDefinition!PacketInitResponseData;
 
 struct PacketRegisterData
 {
@@ -410,19 +647,7 @@ struct PacketRegisterData
     }
 
 }
-
-class PacketRegister : PacketDefinition!PacketRegisterData
-{
-
-    this()
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_REGISTER;
-    }
-
-}
+alias PacketRegister = PacketDefinition!PacketRegisterData;
 
 struct PacketRegisterResponseData
 {
@@ -444,20 +669,7 @@ struct PacketRegisterResponseData
     }
 
 }
-
-class PacketRegisterResponse : PacketDefinition!PacketRegisterResponseData
-{
-
-    this(ushort to)
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_REGISTER_RESPONSE;
-        _to = to;
-    }
-
-}
+alias PacketRegisterResponse = PacketDefinition!PacketRegisterResponseData;
 
 struct PacketClientJoinData
 {
@@ -479,20 +691,7 @@ struct PacketClientJoinData
     }
 
 }
-
-class PacketClientJoin : PacketDefinition!PacketClientJoinData
-{
-
-    this(ushort to)
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_CLIENT_JOIN;
-        _to = to;
-    }
-
-}
+alias PacketClientJoin = PacketDefinition!PacketClientJoinData;
 
 struct PacketClientLeftData
 {
@@ -511,16 +710,4 @@ struct PacketClientLeftData
     }
 
 }
-
-class PacketClientLeft : PacketDefinition!PacketClientLeftData
-{
-
-    this()
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_CLIENT_LEFT;
-    }
-
-}
+alias PacketClientLeft = PacketDefinition!PacketClientLeftData;

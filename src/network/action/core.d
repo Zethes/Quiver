@@ -13,8 +13,9 @@ class ActionCore : Core
     {
         if (isClient)
         {
-            auto packet = new PacketInit;
-            packetQueue.queue(packet);
+            auto packet = newInit();
+            packet.route(Route.connection, Route.server);
+            packet.send();
         }
         else
         {
@@ -22,21 +23,24 @@ class ActionCore : Core
         }
     }
 
-    void ping(uint unique, ushort to = ushort.max)
+    private auto newInit()
     {
-        auto packet = new PacketActionPing;
-        packet.to = to;
-        packet.data.unique = unique;
-        packetQueue.queue(packet);
+        return new PacketInit(this, PACKET_INIT);
     }
 
-    void sendKey(int key)
+    private auto newInitResponse()
     {
-        assert(isClient);
+        return new PacketInitResponse(this, PACKET_INIT_RESPONSE);
+    }
 
-        auto packet = new PacketActionKey;
-        packet.data.key = key;
-        packetQueue.queue(packet);
+    auto newActionPing()
+    {
+        return new PacketActionPing(this, PACKET_ACTION_PING);
+    }
+
+    auto newActionKey()
+    {
+        return new PacketActionKey(this, PACKET_ACTION_KEY);
     }
 
     override @property bool ready()
@@ -73,8 +77,9 @@ class ActionCore : Core
     {
         assert(isServer);
 
-        auto response = new PacketInitResponse(packet.from);
-        packetQueue.queue(response);
+        auto response = newInitResponse();
+        response.respond(packet);
+        response.send();
     }
 
     void processPacket(Packet packet, PacketInitResponse.Data data)
@@ -94,9 +99,10 @@ class ActionCore : Core
 
             if (event.repeat)
             {
-                auto ping = new PacketActionPing;
-                ping.to = packet.from;
+                auto ping = newActionPing();
+                ping.respond(packet);
                 ping.data.unique = data.unique;
+                ping.send();
                 packetQueue.queue(ping);
             }
         }
@@ -108,11 +114,11 @@ class ActionCore : Core
 
             if (!event.cancel)
             {
-                auto pong = new PacketActionPing;
-                pong.to = packet.from;
+                auto pong = newActionPing();
+                pong.respond(packet);
                 pong.data.unique = data.unique;
                 pong.data.pong = true;
-                packetQueue.queue(pong);
+                pong.send();
             }
         }
     }
@@ -120,9 +126,10 @@ class ActionCore : Core
     void processPacket(Packet packet, PacketActionKey.Data data)
     {
         assert(isServer);
+        assert(data.header.from.type == RouteType.Client);
 
         ActionKeyEvent event;
-        event.client = packet.from;
+        event.client = data.header.from.index;
         event.key = data.key;
         _listen.fire!"onActionKey"(event);
     }
@@ -149,7 +156,7 @@ private:
 
 }
 
-enum
+private enum
 {
     PACKET_INIT          = 0,
     PACKET_INIT_RESPONSE = 1,
@@ -173,19 +180,7 @@ struct PacketInitData
     }
 
 }
-
-class PacketInit : PacketDefinition!PacketInitData
-{
-
-    this()
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_INIT;
-    }
-
-}
+alias PacketInit = PacketDefinition!PacketInitData;
 
 struct PacketInitResponseData
 {
@@ -203,20 +198,7 @@ struct PacketInitResponseData
     }
 
 }
-
-class PacketInitResponse : PacketDefinition!PacketInitResponseData
-{
-
-    this(ushort to)
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_INIT_RESPONSE;
-        _to = to;
-    }
-
-}
+alias PacketInitResponse = PacketDefinition!PacketInitResponseData;
 
 struct PacketActionPingData
 {
@@ -236,19 +218,7 @@ struct PacketActionPingData
     }
 
 }
-
-class PacketActionPing : PacketDefinition!PacketActionPingData
-{
-
-    this()
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_ACTION_PING;
-    }
-
-}
+alias PacketActionPing = PacketDefinition!PacketActionPingData;
 
 struct PacketActionKeyData
 {
@@ -267,16 +237,4 @@ struct PacketActionKeyData
     }
 
 }
-
-class PacketActionKey : PacketDefinition!PacketActionKeyData
-{
-
-    this()
-    {
-        super(Data.sizeof);
-        *(cast(Data*)_data) = Data.init;
-
-        header.packet = PACKET_ACTION_KEY;
-    }
-
-}
+alias PacketActionKey = PacketDefinition!PacketActionKeyData;
