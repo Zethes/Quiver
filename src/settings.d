@@ -12,6 +12,7 @@ struct Settings
     bool clientOnly = false;
 
     bool devToolNetwork = false;
+    bool devToolColors = false;
 
     void parseCommandLine(string[] argv)
     {
@@ -25,6 +26,10 @@ struct Settings
             {
                 clientOnly = true;
             }
+            else if (argv[i] == "-print_colors")
+            {
+                devToolColors = true;
+            }
             else if (argv[i] == "-test_network")
             {
                 devToolNetwork = true;
@@ -36,6 +41,8 @@ struct Settings
                 writeln("Options:");
                 writeln("-server \t\t run a dedicated server.");
                 writeln("-client \t\t run a client only.");
+                writeln("-print_colors \t print out the list of colors.");
+                writeln("-test_network \t Runs a stress test of the networking code.");
                 error = true;
             }
             else

@@ -1,13 +1,12 @@
 module render.canvas;
 import deimos.ncurses.ncurses;
 import render.screen;
+import render.colors;
 import std.algorithm;
 import std.conv;
 import std.math;
 import std.stdio;
 import util.vector;
-
-mixin(Screen._colorMixin);
 
 struct Block
 {

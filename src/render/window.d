@@ -1,6 +1,7 @@
 module render.window;
 import deimos.ncurses.ncurses;
 import render.canvas;
+import render.colors;
 import std.conv;
 import std.string;
 import util.vector;
@@ -44,17 +45,19 @@ class Window
         wmove(_handle, pos.y, pos.x);
     }
 
-    void print(T)(VectorI position, T object, byte color = WHITE_ON_BLACK)
+    void print(T)(VectorI position, T object, ushort color = WHITE_ON_BLACK)
     {
         move(position);
         print(object, color);
     }
 
-    void print(T)(T object, byte color = WHITE_ON_BLACK)
+    void print(T)(T object, ushort color = WHITE_ON_BLACK)
     {
-        wattron(_handle, COLOR_PAIR(color));
+        if (color >= 0)
+            Colors.setColor(this, color);
         wprintw(_handle, toStringz(format("%s", object)));
-        wattroff(_handle, COLOR_PAIR(color));
+        if (color >= 0)
+            Colors.unsetColor(this, color);
     }
 
     void print(T : Canvas)(VectorI position, T canvas)
@@ -114,6 +117,19 @@ class Window
         return position;
     }
 
+    @property void position(const VectorI pos)
+    {
+        VectorI oldSize = size;
+        _free();
+        _create(pos, oldSize);
+    }
+
+    void resize(const VectorI pos, const VectorI size)
+    {
+        wresize(_handle, size.y, size.x);
+        mvwin(_handle, pos.y, pos.x);
+    }
+
     @property VectorI cursor() const
     {
         VectorI result;
@@ -125,6 +141,8 @@ class Window
     {
         wmove(_handle, cursor.y, cursor.x);
     }
+
+    @property WINDOW* handle() { return _handle; }
 
     void draw()
     {

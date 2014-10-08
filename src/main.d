@@ -1,5 +1,6 @@
 import core.thread;
 import render.screen;
+import render.colors;
 import settings;
 import tests.network.state;
 import quiver.states.menustate;
@@ -20,6 +21,24 @@ int main(string[] argv)
 
     // Initialize screen pointer outside try-catch so that it can be closed on an exception
     Screen screen = null;
+
+    if (global.devToolColors)
+    {
+        try 
+        {
+            screen = new Screen;
+            Colors.drawPallete(screen.mainWindow);
+            screen.update();
+            while (true) {}
+            screen.close();
+            return 0;
+        }
+        catch (Exception e)
+        {
+            writeln(e);
+            return -1;
+        }
+    }
 
     // Setup master try/catch for unhandled exceptions/errors
     try
