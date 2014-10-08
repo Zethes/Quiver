@@ -1,3 +1,18 @@
+/+
+
+Quiver Network Stress Test
+
+The purpose of this test is to ensure the networking code routing rules are behaving properly. The
+test will create a server and five client managers. The first client manager will connect locally
+(no socket is created in this case) and the other four will connect over localhost. Each client
+manager will register a random number of players ("clients"). At the same time, the server will
+create five data pools.  Once the clients and the data pools have been registered, the clients
+will each request access to random data pools and wait until each request has been accepted. Once
+all of that is said and done, the server will infrequently update the data pools and send the
+changes to each client that is interested.
+
++/
+
 module tests.network.state;
 
 import Net = network;
