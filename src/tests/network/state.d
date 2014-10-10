@@ -101,7 +101,7 @@ class Game : Net.GameManager
 class Client : Net.ClientManager
 {
 
-    const size_t maxClients = 4;
+    static const size_t maxClients = 4;
     Net.Client[] clients;
     Net.Client[ushort] clientMap;
     uint delay = 0;
@@ -272,8 +272,8 @@ class NetworkTestState : State
 private class ClientListener(bool server) : Net.ClientListener
 {
 
-    private const bool isServer = server;
-    private const bool isClient = !server;
+    private static const bool isServer = server;
+    private static const bool isClient = !server;
 
     Net.ManagerBase manager;
 
@@ -341,8 +341,8 @@ private class ClientListener(bool server) : Net.ClientListener
 private class DataListener(bool server) : Net.DataListener
 {
 
-    private const bool isServer = server;
-    private const bool isClient = !server;
+    private static const bool isServer = server;
+    private static const bool isClient = !server;
 
     Net.ManagerBase manager;
 
