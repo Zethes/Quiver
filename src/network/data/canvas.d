@@ -10,14 +10,18 @@ import util.vector;
 class CanvasData : Data
 {
 
-    private union DataHeader
+    // NOTE: this is not a union because it causes an internal compiler error in GDC 4.8.2
+    private struct DataHeader
     {
-        struct
+        union
         {
-            VectorI topLeft;
-            VectorI bottomRight;
+            struct
+            {
+                VectorI topLeft = VectorI(-1, -1);
+                VectorI bottomRight = VectorI(-1, -1);
+            }
+            ubyte[VectorI.sizeof * 2] rawData;
         }
-        ubyte[VectorI.sizeof * 2] rawData;
     }
 
     this(bool client = false)
