@@ -12,14 +12,14 @@ class GenericData : Data
         int x = 5;
     }
 
-    this()
+    this(bool client = false)
     {
-        super(DataType.GENERIC);
+        super(DataType.GENERIC, client);
     }
 
-    this(ubyte[] raw)
+    this(ubyte[] raw, bool client = false)
     {
-        super(DataType.GENERIC);
+        super(DataType.GENERIC, client);
 
         assert(raw.length == NetData.sizeof);
         data = *(cast(NetData*)raw.ptr);

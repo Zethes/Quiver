@@ -21,9 +21,10 @@ enum DataType
 abstract class Data
 {
 
-    this(DataType type)
+    this(DataType type, bool client)
     {
         _type = type;
+        _client = client;
     }
 
     void processProperties()
@@ -54,7 +55,7 @@ protected:
     int[uint] _properties; // actual property
     int[uint] _queueProperties; // client-request property
     uint[] _dirtyProperties;
-    bool _client;
+    bool _client = false;
 
     ubyte[] pack(T...)(T params)
     {
@@ -123,7 +124,6 @@ protected:
                 {
                     _queueProperties[index] = value;
                 }
-                _dirtyProperties ~= index;
                 if (dirty)
                 {
                     _dirtyProperties ~= index;
@@ -366,16 +366,15 @@ class DataCore : Core
                 switch (data.type)
                 {
                     case DataType.GENERIC:
-                        newData = new GenericData;
+                        newData = new GenericData(true);
                         break;
                     case DataType.CANVAS:
-                        newData = new CanvasData;
+                        newData = new CanvasData(true);
                         break;
                     default:
                         assert(0);
                 }
 
-                newData._client = true;
                 _dataNames[name] = data.index;
                 _dataMap[data.index] = newData;
             }

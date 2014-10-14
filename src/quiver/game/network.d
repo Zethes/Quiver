@@ -154,8 +154,8 @@ private class ClientListener : Net.ClientListener
         // Create the player's canvas
         Net.CanvasData canvas = new Net.CanvasData;
         manager.dataCore.registerData("client" ~ to!string(event.index) ~ ".canvas", canvas);
-        canvas.width = 200;
-        canvas.height = 50;
+        canvas.width = 1;
+        canvas.height = 1;
 
         // Create the player's inventory
         Net.GenericData inventory = new Net.GenericData;
