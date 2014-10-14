@@ -1,4 +1,5 @@
 module render.screen;
+
 import core.thread;
 import deimos.ncurses.ncurses;
 import render.window;
@@ -7,10 +8,11 @@ import std.container;
 import std.conv;
 import std.string;
 import util.vector;
+
 class Screen
 {
 
-   /////////////////
+    /////////////////
     // Constructor //
     /////////////////
 

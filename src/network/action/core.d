@@ -43,6 +43,11 @@ class ActionCore : Core
         return new PacketActionKey(this, PACKET_ACTION_KEY);
     }
 
+    auto newActionFixed()
+    {
+        return new PacketActionFixed(this, PACKET_ACTION_FIXED);
+    }
+
     override @property bool ready()
     {
         return _ready;
@@ -68,6 +73,10 @@ class ActionCore : Core
                 assert(packet.length == PacketActionKey.Data.sizeof);
                 processPacket(packet, *(cast(PacketActionKey.Data*)packet.rawData));
                 break;
+            case PACKET_ACTION_FIXED:
+                assert(packet.length == PacketActionFixed.Data.sizeof);
+                processPacket(packet, *(cast(PacketActionFixed.Data*)packet.rawData));
+                break;
             default:
                 assert(0);
         }
@@ -91,6 +100,9 @@ class ActionCore : Core
 
     void processPacket(Packet packet, PacketActionPing.Data data)
     {
+        assert(!isServer || data.header.from.type == RouteType.Client);
+        assert(!isClient || data.header.from.type == RouteType.Server);
+
         if (data.pong)
         {
             ActionPongEvent event;
@@ -134,6 +146,15 @@ class ActionCore : Core
         _listen.fire!"onActionKey"(event);
     }
 
+    void processPacket(Packet packet, PacketActionFixed.Data data)
+    {
+        assert(!isServer || data.header.from.type == RouteType.Client);
+        assert(!isClient || data.header.from.type == RouteType.Server);
+
+        ActionFixedEvent event;
+        _listen.fire!"onActionFixed"(event);
+    }
+
     override void update()
     {
     }
@@ -158,11 +179,16 @@ private:
 
 private enum
 {
-    PACKET_INIT          = 0,
-    PACKET_INIT_RESPONSE = 1,
-    PACKET_ACTION_PING   = 2,
-    PACKET_ACTION_KEY    = 3
+    PACKET_INIT            = 0,
+    PACKET_INIT_RESPONSE   = 1,
+    PACKET_ACTION_PING     = 2,
+    PACKET_ACTION_KEY      = 3,
+    PACKET_ACTION_FIXED    = 4
 }
+
+////////////////////////
+// Packet: Initialize //
+////////////////////////
 
 struct PacketInitData
 {
@@ -182,6 +208,10 @@ struct PacketInitData
 }
 alias PacketInit = PacketDefinition!PacketInitData;
 
+/////////////////////////////////
+// Packet: Initialize Response //
+/////////////////////////////////
+
 struct PacketInitResponseData
 {
 
@@ -199,6 +229,10 @@ struct PacketInitResponseData
 
 }
 alias PacketInitResponse = PacketDefinition!PacketInitResponseData;
+
+/////////////////////////
+// Packet: Ping & Pong //
+/////////////////////////
 
 struct PacketActionPingData
 {
@@ -218,7 +252,17 @@ struct PacketActionPingData
     }
 
 }
-alias PacketActionPing = PacketDefinition!PacketActionPingData;
+
+class PacketActionPing : PacketDefinition!PacketActionPingData
+{
+    mixin(constructor);
+
+    mixin directAccess!"unique";
+}
+
+////////////////////////
+// Packet: Key Action //
+////////////////////////
 
 struct PacketActionKeyData
 {
@@ -238,3 +282,43 @@ struct PacketActionKeyData
 
 }
 alias PacketActionKey = PacketDefinition!PacketActionKeyData;
+
+//////////////////////////
+// Packet: Fixed Action //
+//////////////////////////
+
+struct PacketActionFixedData
+{
+
+    PacketHeader header;
+    uint type;
+    ubyte[4] data;
+
+    void swap(bool swapHeader)
+    {
+        if (swapHeader)
+        {
+            header.swap();
+        }
+
+        // TODO: endian swapping
+    }
+
+}
+
+class PacketActionFixed : PacketDefinition!PacketActionFixedData
+{
+
+    mixin(constructor);
+
+    mixin directAccess!"type";
+
+    @property void uintValue(uint value)
+    {
+    }
+
+    @property void floatValue(float value)
+    {
+    }
+
+}

@@ -1,4 +1,4 @@
-module quiver.client;
+module quiver.client.main;
 import quiver.ui;
 
 import Net = network;
@@ -8,6 +8,24 @@ import settings;
 import std.conv;
 import util.log;
 import util.vector;
+
+private class ActionListener : Net.ActionListener
+{
+
+    this(QuiverClient client)
+    {
+        _client = client;
+    }
+
+    override void onActionFixed(ref Net.ActionFixedEvent event)
+    {
+    }
+
+private:
+
+    QuiverClient _client;
+
+}
 
 private class ClientListener : Net.ClientListener
 {
@@ -93,6 +111,9 @@ class QuiverClient : Net.ClientManager
 
     this(Screen screen)
     {
+        _actionListener = new ActionListener(this);
+        _actionCore.addListener(_actionListener);
+
         _clientListener = new ClientListener(this);
         _clientCore.addListener(_clientListener);
 
@@ -178,6 +199,7 @@ class QuiverClient : Net.ClientManager
 
 private:
 
+    ActionListener _actionListener;
     ClientListener _clientListener;
     DataListener _dataListener;
 

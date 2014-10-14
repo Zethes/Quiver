@@ -36,9 +36,9 @@ class GameState : State
 
         if (server)
         {
-            _game = new QuiverGame;
-            _netControl.registerManager(_game);
-            _game.setMaxConnections(_settings.maxConnections);
+            _game = new Game;
+            _netControl.registerManager(_game.network.manager);
+            _game.network.maxConnections = _settings.maxConnections;
             _game.listen(_settings.port);
         }
         if (client)
@@ -53,12 +53,17 @@ class GameState : State
 
         if (server && client)
         {
-            _client.connect(_game);
+            _client.connect(_game.network.manager);
         }
 
         ManagerSettings managerSettings;
         managerSettings.client.maxClients = 10;
         _netControl.initCores(managerSettings);
+
+        if (_game !is null)
+        {
+            _game.init();
+        }
     }
 
     void update()
@@ -67,10 +72,13 @@ class GameState : State
         if (!ready && _netControl.ready)
         {
             log("READY! :)");
-            //_netControl.initManagers();
             ready = true;
         }
         _netControl.update();
+        if (_game !is null)
+        {
+            _game.update();
+        }
     }
 
     void exit()
@@ -85,7 +93,7 @@ private:
 
     Net.Control _netControl;
 
-    QuiverGame _game;
+    Game _game;
     QuiverClient _client;
 
     GameSettings _settings;

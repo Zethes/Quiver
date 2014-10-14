@@ -174,6 +174,12 @@ class PacketDefinition(T) : Packet
 
     static const string constructor = "this(Core core, ushort packet = ushort.max){super(core, packet);}";
 
+    mixin template directAccess(string str)
+    {
+        mixin("@property ref auto " ~ str ~ "() {return data." ~ str ~ ";}");
+        mixin("@property auto " ~ str ~ "() const{return data." ~ str ~ ";}");
+    }
+
     alias Data = T;
 
     this(Core core, ushort packet = ushort.max)
@@ -185,6 +191,11 @@ class PacketDefinition(T) : Packet
     }
 
     @property ref Data data()
+    {
+        return *(cast(Data*)_data);
+    }
+
+    @property Data data() const
     {
         return *(cast(Data*)_data);
     }
@@ -355,10 +366,18 @@ struct PacketHeader
 class PacketQueue
 {
 
+    static const bool traceAll = false;
+
     void queue(T)(T packet)
         if (is(typeof(packet.header) == PacketHeader*) && is(typeof(packet.data.header) == PacketHeader))
     {
         assert(packet._sent, "Calling queue directly is deprecated, please use Packet.send().");
+
+        // Debugging: trace all packets
+        if (traceAll)
+        {
+            packet.trace = true;
+        }
 
         // TODO: endian swapping
         if (false)
@@ -374,6 +393,12 @@ class PacketQueue
         if (is(typeof(packet.header) == PacketHeader*) && is(typeof(packet.data.header) == PacketHeader))
     {
         assert(packet._sent, "Calling queue directly is deprecated, please use Packet.send(extra).");
+
+        // Debugging: trace all packets
+        if (traceAll)
+        {
+            packet.trace = true;
+        }
 
         // TODO: endian swapping
         if (false)

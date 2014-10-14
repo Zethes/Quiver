@@ -213,7 +213,7 @@ class NetworkTestState : State
         // Create server
         game = new Game;
         netControl.registerManager(game);
-        game.setMaxConnections(clientManagers.length);
+        game.maxConnections = clientManagers.length;
         game.listen(1234);
 
         // Create clients

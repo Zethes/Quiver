@@ -10,14 +10,19 @@ class PacketFactory
         _manager = manager;
     }
 
-    auto newActionKey()
+    auto newActionFixed()
     {
-        return _manager.actionCore.newActionKey();
+        return _manager.actionCore.newActionFixed();
     }
 
     auto newActionPing()
     {
         return _manager.actionCore.newActionPing();
+    }
+
+    auto newActionKey()
+    {
+        return _manager.actionCore.newActionKey();
     }
 
     auto newClientRegister()

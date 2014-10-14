@@ -10,8 +10,8 @@ import util.vector;
 
 struct Block
 {
-    static const char defaultCharacter = '`';
-    static const ubyte defaultColor = GREEN_ON_BLACK;
+    static const char defaultCharacter = ' ';
+    static const ubyte defaultColor = BLACK_ON_BLACK;
 
     char character = defaultCharacter;
     ubyte color = defaultColor;

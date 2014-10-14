@@ -128,6 +128,11 @@ class CanvasData : Data
         setProperty(1, value);
     }
 
+    @property VectorI size() const
+    {
+        return VectorI(width, height);
+    }
+
 private:
 
     Block[] _rawData;

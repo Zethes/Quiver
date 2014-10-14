@@ -8,6 +8,7 @@ struct ActionPingEvent
 
 struct ActionPongEvent
 {
+    ushort client;
     uint unique;
     bool repeat = false;
 }
@@ -16,6 +17,12 @@ struct ActionKeyEvent
 {
     ushort client;
     int key;
+}
+
+struct ActionFixedEvent
+{
+    ushort client;
+    ubyte[4] data;
 }
 
 abstract class ActionListener
@@ -29,6 +36,10 @@ abstract class ActionListener
     }
 
     void onActionKey(ref ActionKeyEvent event)
+    {
+    }
+
+    void onActionFixed(ref ActionFixedEvent event)
     {
     }
 }

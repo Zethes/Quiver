@@ -93,23 +93,23 @@ abstract class ManagerBase
         return null;
     }
 
-    @property ClientCore clientCore()
+    @property inout(ClientCore) clientCore() inout
     {
         return _clientCore;
     }
 
-    @property DataCore dataCore()
+    @property inout(DataCore) dataCore() inout
     {
         return _dataCore;
     }
 
-    @property ActionCore actionCore()
+    @property inout(ActionCore) actionCore() inout
     {
         return _actionCore;
     }
 
 
-    @property PacketFactory packetFactory()
+    @property inout(PacketFactory) packetFactory() inout
     {
         return _packetFactory;
     }
@@ -458,7 +458,12 @@ class Manager(ManagerType type) : ManagerBase
             return false;
         }
 
-        void setMaxConnections(ushort count)
+        @property ushort maxConnections() const
+        {
+            return to!ushort(_connections.length);
+        }
+
+        @property void maxConnections(ushort count)
         {
             assert(count != 0);
 
