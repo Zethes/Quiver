@@ -173,18 +173,15 @@ class QuiverClient : Net.ClientManager
                     }
                 }
             }
-            _screen.mainWindow.clear();
-            /*_screen.mainWindow.print("timer: ");
-            if (_inventoryData !is null)
-            {
-                _screen.mainWindow.print(_timerData.x);
-            }
-            _screen.mainWindow.print("\n");
-            _screen.mainWindow.print("in-game :)\n");
-            _screen.mainWindow.print(clientCore.connectedClients);*/
+
             if (_canvasData !is null)
             {
-                _screen.mainWindow.print(_canvasData.canvas);
+                if (_canvasData.canvas.dirty)
+                {
+                    _screen.mainWindow.move(VectorI(0, 0));
+                    _screen.mainWindow.print(_canvasData.canvas);
+                    _canvasData.canvas.clean();
+                }
 
                 _canvasData.width = _screen.mainWindow.size.x;
                 _canvasData.height = _screen.mainWindow.size.y;

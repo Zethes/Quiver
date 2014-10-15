@@ -166,7 +166,7 @@ class CanvasData : Data
         {
             if (_canvas.at(x, y) != block)
             {
-                _canvas.at(x, y) = block;
+                _canvas.set(x, y, block);
                 _rawData[x + _canvas.width * y] = block;
 
                 if (!dirty)
@@ -239,7 +239,7 @@ class CanvasData : Data
 
     @property bool dirty() const
     {
-        return _dirtyTopLeft.x != -1 || _dirtyTopLeft.y != -1 || _dirtyBottomRight.x != -1 || _dirtyBottomRight.y != -1;
+        return _dirtyTopLeft.x != -1 && _dirtyTopLeft.y != -1 && _dirtyBottomRight.x != -1 && _dirtyBottomRight.y != -1;
     }
 
 private:
@@ -256,7 +256,7 @@ private:
         {
             for (int h = 0; h < _canvas.height; h++)
             {
-                _canvas.at(w, h) = at(w, h);
+                _canvas.set(w, h, at(w, h));
             }
         }
     }

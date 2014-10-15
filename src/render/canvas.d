@@ -6,6 +6,7 @@ import std.algorithm;
 import std.conv;
 import std.math;
 import std.stdio;
+import util.log;
 import util.vector;
 
 struct Block
@@ -73,7 +74,7 @@ class Canvas
     // Canvas Data //
     /////////////////
 
-    ref Block at(int x, int y)
+    Block at(int x, int y)
     {
         assert(x >= 0 && y >= 0 && x < _width && y < _height,
                "Cannot get canvas point (" ~ to!string(VectorI(x, y)) ~ ") for canvas size (" ~ to!string(size) ~ ")!");
@@ -81,9 +82,47 @@ class Canvas
         return _data[x + width * y];
     }
 
-    ref Block at(VectorI pos)
+    Block at(VectorI pos)
     {
         return at(pos.x, pos.y);
+    }
+
+    void set(int x, int y, Block block)
+    {
+        if (_data[x + width * y] != block)
+        {
+            _data[x + width * y] = block;
+
+            if (!dirty)
+            {
+                _dirtyTopLeft = VectorI(x, y);
+                _dirtyBottomRight = VectorI(x + 1, y + 1);
+            }
+            else
+            {
+                if (_dirtyTopLeft.x > x)
+                {
+                    _dirtyTopLeft.x = x;
+                }
+                if (_dirtyTopLeft.y > y)
+                {
+                    _dirtyTopLeft.y = y;
+                }
+                if (_dirtyBottomRight.x < x + 1)
+                {
+                    _dirtyBottomRight.x = x + 1;
+                }
+                if (_dirtyBottomRight.y < y + 1)
+                {
+                    _dirtyBottomRight.y = y + 1;
+                }
+            }
+        }
+    }
+
+    void set(VectorI pos, Block block)
+    {
+        set(pos.x, pos.y, block);
     }
 
     /////////////////////
@@ -120,9 +159,42 @@ class Canvas
         resize(value);
     }
 
+    ///////////////////
+    // Dirty & Clean //
+    ///////////////////
+
+    void dirtyAll()
+    {
+        _dirtyTopLeft = VectorI(0, 0);
+        _dirtyBottomRight = VectorI(_width, _height);
+    }
+
+    void clean()
+    {
+        _dirtyTopLeft = VectorI(-1, -1);
+        _dirtyBottomRight = VectorI(-1, -1);
+    }
+
+    @property bool dirty() const
+    {
+        return _dirtyTopLeft.x != -1 && _dirtyTopLeft.y != -1 && _dirtyBottomRight.x != -1 && _dirtyBottomRight.y != -1;
+    }
+
+    @property VectorI dirtyTopLeft()
+    {
+        return _dirtyTopLeft;
+    }
+
+    @property VectorI dirtyBottomRight()
+    {
+        return VectorI(min(_width, _dirtyBottomRight.x), min(_height, _dirtyBottomRight.y));
+    }
+
 private:
 
     int _width, _height;
     Block[] _data;
+    VectorI _dirtyTopLeft;
+    VectorI _dirtyBottomRight;
 
 }

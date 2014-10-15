@@ -4,6 +4,7 @@ import render.canvas;
 import render.colors;
 import std.conv;
 import std.string;
+import util.log;
 import util.vector;
 
 class Window
@@ -53,11 +54,9 @@ class Window
 
     void print(T)(T object, ushort color = WHITE_ON_BLACK)
     {
-        if (color >= 0)
-            Colors.setColor(this, color);
+        Colors.setColor(this, color);
         wprintw(_handle, toStringz(format("%s", object)));
-        if (color >= 0)
-            Colors.unsetColor(this, color);
+        Colors.unsetColor(this, color);
     }
 
     void print(T : Canvas)(VectorI position, T canvas)
@@ -69,18 +68,28 @@ class Window
     void print(T : Canvas)(T canvas)
     {
         VectorI startCursor = cursor;
-        for (int h = 0; h < canvas.height; h++)
+        move(canvas.dirtyTopLeft);
+        for (int h = canvas.dirtyTopLeft.y; h < canvas.dirtyBottomRight.y; h++)
         {
-            for (int w = 0; w < canvas.width; w++)
+            size_t pos = getcurx(_handle);
+            for (int w = canvas.dirtyTopLeft.x; w < canvas.dirtyBottomRight.x; w++)
             {
-                Block block = canvas.at(w, h);
-                print(block.character, block.color);
+                if (pos++ < size.x)
+                {
+                    Block block = canvas.at(w, h);
+                    print(block.character, block.color);
+                }
+                else
+                {
+                    break;
+                }
             }
             if (getcurx(_handle) != 0)
             {
-                move(startCursor + VectorI(0, h + 1));
+                move(startCursor + VectorI(canvas.dirtyTopLeft.x, h + 1));
             }
         }
+        move(canvas.size - VectorI(1, 1));
     }
 
     void addBorder()
