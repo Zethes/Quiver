@@ -129,9 +129,9 @@ class CanvasData : Data
             // Update sub-data
             int width = _canvas.width;
             size_t index = 0;
-            for (int w = header.topLeft.x; w < header.bottomRight.x; w++)
+            for (int h = header.topLeft.y; h < header.bottomRight.y; h++)
             {
-                for (int h = header.topLeft.y; h < header.bottomRight.y; h++)
+                for (int w = header.topLeft.x; w < header.bottomRight.x; w++)
                 {
                     if (header.topLeft.x == 0)
                     {

@@ -1,7 +1,7 @@
 module quiver.game.player;
 
 import quiver.game.network : NetworkData = PlayerNetworkData;
-import quiver.game.entity.base;
+import quiver.game.entity.player;
 
 class Player
 {
@@ -26,9 +26,14 @@ class Player
         return _networkData;
     }
 
-    @property ref Entity entity()
+    @property ref PlayerEntity entity()
     {
         return _entity;
+    }
+
+    @property bool ready() const
+    {
+        return _entity.ready;
     }
 
 private:
@@ -36,7 +41,7 @@ private:
     ushort _index;
     uint _world;
 
-    Entity _entity;
+    PlayerEntity _entity;
 
     NetworkData _networkData;
 

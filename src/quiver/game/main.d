@@ -28,7 +28,7 @@ class Game
     {
         _players = new Player[network.maxPlayers];
 
-        _timer.start();
+        //_timer.start();
     }
 
     void listen(ushort port)
@@ -45,7 +45,7 @@ class Game
 
     void update()
     {
-        if (_timer.peek().to!("seconds", float)() >= 0.1f)
+        if (_timer.peek().to!("seconds", float)() >= 0.25f || network.ready)
         {
             network.preTick();
             entityManager.tick();

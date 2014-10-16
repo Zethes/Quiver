@@ -49,8 +49,6 @@ class Network
 
     void sendData()
     {
-        static ubyte col = 0;
-        col = (col + 1) % 256;
         foreach (player; _game.connectedPlayers)
         {
             World world = _game.getWorld();
@@ -97,6 +95,26 @@ class Network
     @property inout(Net.PacketFactory) packetFactory() inout
     {
         return _manager.packetFactory;
+    }
+
+    @property bool ready() const
+    {
+        /*foreach (player; _game.connectedPlayers)
+        {
+            if (!player.ready)
+            {
+                return false;
+            }
+        }
+        return true;*/
+        foreach (player; _game.connectedPlayers)
+        {
+            if (player.ready)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
 private:
@@ -172,7 +190,10 @@ private class ClientListener : Net.ClientListener
         network._game.addPlayer(player);
 
         // Create the player entity
-        player.entity = network._game.entityManager.createEntity(network._game.getWorld(), VectorI(uniform!"[]"(0, 10), uniform!"[]"(0, 10)));
+        player.entity = network._game.entityManager.createPlayer(network._game.getWorld(), VectorI(uniform!"[]"(0, 10), uniform!"[]"(0, 10)));
+
+        // Create a test entity
+        network._game.entityManager.createMob(network._game.getWorld(), VectorI(uniform!"[]"(10, 20), uniform!"[]"(10, 20)));
 
     }
 
@@ -187,6 +208,10 @@ private class ClientListener : Net.ClientListener
         // Free the user's data
         manager.dataCore.freeData("client" ~ to!string(event.index) ~ ".canvas");
         manager.dataCore.freeData("client" ~ to!string(event.index) ~ ".inventory");
+
+        // Get the player object
+        Player player = network._game.getPlayer(event.index);
+        network._game.entityManager.removeEntity(player.entity);
 
         // Remove from player list
         network._game.removePlayer(event.index);

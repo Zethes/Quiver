@@ -74,6 +74,11 @@ class World
         }
     }
 
+    Render.Block getBlockAt(VectorI position)
+    {
+        return getChunkAt(position).getBlock(position);
+    }
+
     Chunk loadChunk(VectorI position)
     {
         assert((position in _chunkPositionMap) is null);
@@ -87,8 +92,7 @@ class World
 
 private:
 
-    //VectorI _chunkSize = VectorI(256, 256);
-    VectorI _chunkSize = VectorI(8, 8);
+    VectorI _chunkSize = VectorI(256, 256);
     Chunk[] _loadedChunks;
     Chunk[VectorI] _chunkPositionMap;
 

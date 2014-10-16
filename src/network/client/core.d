@@ -165,19 +165,6 @@ class ClientCore : Core
         return _ready;
     }
 
-    void registerClient(string name) // TODO: deprecate this
-    {
-        assert(isClient);
-
-        auto packet = newClientRegister();
-        assert(name.length <= packet.data.name.length);
-
-        packet.route(Route.connection, Route.server);
-        packet.data.nameLength = cast(ubyte)name.length;
-        packet.data.name[0 .. name.length] = name;
-        packet.send();
-    }
-
     @property ushort maxClients() const
     {
         return cast(ushort)_clients.length;
@@ -647,7 +634,19 @@ struct PacketRegisterData
     }
 
 }
-alias PacketRegister = PacketDefinition!PacketRegisterData;
+
+class PacketRegister : PacketDefinition!PacketRegisterData
+{
+
+    mixin(constructor);
+
+    @property void name(string value)
+    {
+        data.name[0 .. value.length] = value;
+        data.nameLength = to!ubyte(value.length);
+    }
+
+}
 
 struct PacketRegisterResponseData
 {

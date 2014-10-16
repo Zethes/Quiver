@@ -58,6 +58,12 @@ struct Vector(T)
         }
     }
 
+    ref Vector!T opOpAssign(string op)(const Vector!T rhs)
+    {
+        this = opBinary!op(rhs);
+        return this;
+    }
+
     string toString() const
     {
         return format("%s, %s", x, y);

@@ -1,6 +1,8 @@
 module quiver.game.entity.manager;
 
 import quiver.game.entity.base;
+import quiver.game.entity.mob;
+import quiver.game.entity.player;
 import quiver.game.world.chunk;
 import quiver.game.world.main;
 import util.vector;
@@ -8,15 +10,27 @@ import util.vector;
 class EntityManager
 {
 
-    Entity createEntity(World world, VectorI position)
+    PlayerEntity createPlayer(World world, VectorI position)
     {
-        Entity entity = new Entity(world, position);
-        _entities ~= entity;
+        return createEntity(new PlayerEntity(world, position));
+    }
 
-        Chunk chunk = world.getChunkAt(position);
-        chunk.addEntity(entity);
+    MobEntity createMob(World world, VectorI position)
+    {
+        return createEntity(new MobEntity(world, position));
+    }
 
-        return entity;
+    void removeEntity(Entity entity)
+    {
+        foreach (size_t index, e; _entities)
+        {
+            if (e == entity)
+            {
+                entity.chunk.removeEntity(entity);
+                _entities = _entities[0 .. index] ~ _entities[index + 1 .. $];
+                break;
+            }
+        }
     }
 
     void tick()
@@ -28,6 +42,16 @@ class EntityManager
     }
 
 private:
+
+    T createEntity(T)(T entity)
+    {
+        _entities ~= entity;
+
+        Chunk chunk = entity.world.getChunkAt(entity.position);
+        chunk.addEntity(entity);
+
+        return entity;
+    }
 
     Entity[] _entities;
 

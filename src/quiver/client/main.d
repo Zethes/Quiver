@@ -126,7 +126,12 @@ class QuiverClient : Net.ClientManager
 
     override void init()
     {
-        clientCore.registerClient("Player");
+        auto packet = packetFactory.newClientRegister();
+
+        packet.route(Net.Route.connection, Net.Route.server);
+        packet.name = "Player";
+        packet.send();
+
         UI.register("Chat", new ChatWindow(_screen.mainWindow.size));
 
         (cast(ChatWindow)UI.getWindow("Chat")).addMessage(ChatMessageTypes.clientMessage, "Loading...");

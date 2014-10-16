@@ -15,32 +15,13 @@ class Entity
         _position = position;
     }
 
-    int key;
     void tick()
     {
-        if (key == 'j')
-        {
-            _position.y += 1;
-        }
-        if (key == 'k')
-        {
-            _position.y -= 1;
-        }
-        if (key == 'h')
-        {
-            _position.x -= 1;
-        }
-        if (key == 'l')
-        {
-            _position.x += 1;
-        }
-        key = -1;
-        relocate();
     }
 
     Render.Block getBlock() const
     {
-        return Render.Block('@', Render.CYAN_ON_BLACK);
+        return Render.Block('?', Render.WHITE_ON_BLACK);
     }
 
     void relocate()
@@ -64,7 +45,44 @@ class Entity
         relocate();
     }
 
-private:
+    @property Chunk chunk()
+    {
+        return _chunk;
+    }
+
+    @property World world()
+    {
+        return _world;
+    }
+
+    void move(VectorI direction)
+    {
+        if (direction == VectorI(0, 0)) return;
+        assert(direction.y != 0 || (direction.x == -1 || direction.x == 1));
+        assert(direction.x != 0 || (direction.y == -1 || direction.y == 1));
+
+        VectorI newPosition = _position + direction;
+
+        bool cancel = false;
+        if (newPosition.x <= 0 || newPosition.y <= 0)
+        {
+            cancel = true;
+        }
+
+        Render.Block block = _world.getBlockAt(newPosition);
+        if (block.character == '*')
+        {
+            cancel = true;
+        }
+
+        if (!cancel)
+        {
+            _position = newPosition;
+            relocate();
+        }
+    }
+
+protected:
 
     World _world;
     Chunk _chunk;
