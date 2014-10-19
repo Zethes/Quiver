@@ -74,8 +74,8 @@ class CanvasData : Data
         if (dirty)
         {
             DataHeader header;
-            header.topLeft = _dirtyTopLeft;
-            header.bottomRight = _dirtyBottomRight;
+            header.topLeft = canvas.dirtyTopLeft;
+            header.bottomRight = canvas.dirtyBottomRight;
 
             // Calculate size of data
             VectorI difference = header.bottomRight - header.topLeft;
@@ -172,39 +172,13 @@ class CanvasData : Data
             {
                 _canvas.set(x, y, block);
                 _rawData[x + _canvas.width * y] = block;
-
-                if (!dirty)
-                {
-                    _dirtyTopLeft = VectorI(x, y);
-                    _dirtyBottomRight = VectorI(x + 1, y + 1);
-                }
-                else
-                {
-                    if (_dirtyTopLeft.x > x)
-                    {
-                        _dirtyTopLeft.x = x;
-                    }
-                    if (_dirtyTopLeft.y > y)
-                    {
-                        _dirtyTopLeft.y = y;
-                    }
-                    if (_dirtyBottomRight.x < x + 1)
-                    {
-                        _dirtyBottomRight.x = x + 1;
-                    }
-                    if (_dirtyBottomRight.y < y + 1)
-                    {
-                        _dirtyBottomRight.y = y + 1;
-                    }
-                }
             }
         }
     }
 
     void dirtyAll()
     {
-        _dirtyTopLeft = VectorI(0, 0);
-        _dirtyBottomRight = size;
+        _canvas.dirtyAll();
     }
 
     @property Canvas canvas()
@@ -243,16 +217,13 @@ class CanvasData : Data
 
     @property bool dirty() const
     {
-        return _dirtyTopLeft.x != -1 && _dirtyTopLeft.y != -1 && _dirtyBottomRight.x != -1 && _dirtyBottomRight.y != -1;
+        return _canvas.dirty;
     }
 
 private:
 
     Block[] _rawData;
     Canvas _canvas;
-
-    VectorI _dirtyTopLeft;
-    VectorI _dirtyBottomRight;
 
     void updateCanvas()
     {
@@ -267,8 +238,7 @@ private:
 
     void clean()
     {
-        _dirtyTopLeft = VectorI(-1, -1);
-        _dirtyBottomRight = VectorI(-1, -1);
+        _canvas.clean();
     }
 
 }
